@@ -49,5 +49,13 @@
     "fluid_mode": "none",
     "manifold_check": true,
     "merge_distance": 0.001
+  },
+  "slice": {
+    "slice_enabled": true,
+    "slice_thickness": 0.002,
+    "slice_axis": "y",
+    "slice_position": 0.0,
+    "keep_only_intersecting_particles": true,
+    "preserve_original_packing": true
   }
 }

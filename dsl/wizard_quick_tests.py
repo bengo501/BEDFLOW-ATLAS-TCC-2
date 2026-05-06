@@ -11,8 +11,9 @@
 # comentarios em minusculas sem acentos sem pontuacao final por linha
 from __future__ import annotations
 
-import time
+import json
 import shutil
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
@@ -209,7 +210,22 @@ def _ask_slice(ui: Any) -> Dict[str, Any]:
     # thin slice opcional para testes rapidos
     if not ui.confirm("ativar thin slice (pseudo 2d)?", default=False):
         return {}
-    axis = ui.pick_from_list("eixo do corte", ["x", "y", "z"], 1)
+    axis = "y"
+    while True:
+        raw = ui.ask_line(
+            "eixo do corte: 1=x 2=y 3=z (ou letra) [2]: ",
+            default="2",
+        ).strip().lower()
+        if raw in ("1", "x"):
+            axis = "x"
+            break
+        if raw in ("2", "y"):
+            axis = "y"
+            break
+        if raw in ("3", "z"):
+            axis = "z"
+            break
+        ui.warn("use 1 ou x, 2 ou y, 3 ou z")
     thick = ui.ask_line("espessura da fatia (m) [0.002]: ", default="0.002").strip() or "0.002"
     pos = ui.ask_line("posicao central (m) [0.0]: ", default="0.0").strip() or "0.0"
     keep_only = ui.confirm("manter apenas particulas que intersectam?", default=True)

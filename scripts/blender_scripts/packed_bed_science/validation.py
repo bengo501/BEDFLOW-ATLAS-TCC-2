@@ -45,6 +45,12 @@ def validate_position(
     return True, None
 
 
+def _pair_distance_tolerance(need: float) -> float:
+    # folga numerica: empacotamentos hexagonais dao d == need em teoria; em float d pode
+    # ficar epsilon abaixo de need e disparar falso positivo
+    return max(1e-9, abs(float(need)) * 1e-10)
+
+
 def check_collision_pair(
     p1: Tuple[float, float, float],
     r1: float,
@@ -57,8 +63,10 @@ def check_collision_pair(
     # r1 e r2 sao raios
     # calculamos a distancia minima exigida entre centros
     need = sphere_center_clearance(r1, r2, gap)
-    # se a distancia real for menor que need entao retornamos true para colisao
-    return euclidean_distance(p1, p2) < need
+    d = euclidean_distance(p1, p2)
+    tol = _pair_distance_tolerance(need)
+    # colisao so se claramente abaixo do minimo (toca ou folga exata conta como ok)
+    return d < need - tol
 
 
 def validate_configuration(

@@ -27,7 +27,7 @@ _DSL_DIR = Path(__file__).resolve().parent
 _REPO_ROOT = _DSL_DIR.parent
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
-from bedflow_local_paths import beds_dir, models_3d_dir, simulations_dir
+from bedflow_local_paths import beds_dir, local_data_root, models_3d_dir, simulations_dir
 # caminho para packed bed science e leito extracao dentro de scripts blender scripts
 _BLENDER_SCRIPTS = _REPO_ROOT / "scripts" / "blender_scripts"
 # inserir esse caminho no inicio de sys path para importar packed bed science como pacote
@@ -188,8 +188,14 @@ class BedWizard:
         },
     }
 
+    @staticmethod
+    def _normalize_lang_code(code: Optional[str]) -> str:
+        c = (code or "pt").strip().lower()
+        return c if c in ("pt", "en") else "pt"
+
     def _t(self, key: str, default_pt: str = "") -> str:
-        d = self._I18N.get(getattr(self, "lang", "pt"), {})
+        loc = BedWizard._normalize_lang_code(getattr(self, "lang", None))
+        d = self._I18N.get(loc, {})
         if key in d:
             return d[key]
         # fallback pt se existir, senao default_pt
@@ -276,7 +282,8 @@ class BedWizard:
         self._cancel_enabled = True
         # true apos carregar .bed e o utilizador pedir saltar o questionario
         self.skip_questionnaire_after_load = False
-        self.lang = "pt"
+        self.lang = BedWizard._normalize_lang_code("pt")
+        self._load_wizard_ui_lang()
         
         # dicionario com informacoes de ajuda para cada parametro
         self.param_help = {
@@ -525,6 +532,39 @@ class BedWizard:
             }
         }
         
+    def _wizard_lang_pref_path(self) -> Path:
+        return local_data_root() / "wizard_ui_lang.txt"
+
+    def _load_wizard_ui_lang(self) -> None:
+        try:
+            p = self._wizard_lang_pref_path()
+            if not p.is_file():
+                return
+            self.lang = BedWizard._normalize_lang_code(p.read_text(encoding="utf-8"))
+        except OSError:
+            pass
+
+    def _save_wizard_ui_lang(self) -> None:
+        try:
+            self._wizard_lang_pref_path().write_text(
+                BedWizard._normalize_lang_code(self.lang), encoding="utf-8"
+            )
+        except OSError:
+            pass
+
+    def _lang_code_from_choice_label(self, pick: str) -> Optional[str]:
+        """mapeia o texto mostrado no menu (pt ou en) para codigo pt/en."""
+        pick = (pick or "").strip()
+        if not pick:
+            return None
+        for code in ("pt", "en"):
+            k = f"lang.{code}"
+            for loc in ("pt", "en"):
+                lab = self._I18N.get(loc, {}).get(k)
+                if lab is not None and pick == lab:
+                    return str(code)
+        return None
+
     def clear_screen(self):
         """limpar tela do terminal para melhor visualizacao"""
         self.ui.clear()
@@ -3375,23 +3415,33 @@ cfd {
         self.ui.render_main_menu(self._main_menu_rows(), title=self._t("menu.title.main", "opcoes"))
 
     def language_mode(self) -> None:
+        self.lang = BedWizard._normalize_lang_code(self.lang)
         self.clear_screen()
         self.print_header(self._t("lang.header", "idioma"), self._t("lang.subtitle", "trocar idioma do wizard"))
         self.ui.breadcrumbs("wizard", self._t("lang.header", "idioma"))
         self.ui.println()
-        cur = self._t("lang.pt", "portugues") if self.lang == "pt" else self._t("lang.en", "ingles")
+        cur = self._t("lang.pt" if self.lang == "pt" else "lang.en", "portugues" if self.lang == "pt" else "ingles")
         self.ui.muted(f"{self._t('lang.current', 'idioma atual')}: {cur}")
         self.ui.println()
+        opts = [self._t("lang.pt", "portugues"), self._t("lang.en", "ingles")]
+        default_idx = 0 if self.lang == "pt" else 1
         try:
             pick = self.get_choice(
                 self._t("lang.choose", "escolha o idioma"),
-                [self._t("lang.pt", "portugues"), self._t("lang.en", "ingles")],
-                0 if self.lang == "pt" else 1,
+                opts,
+                default_idx,
             )
         except _WizardCancelled:
             self.ui.muted("cancelado.")
             return
-        self.lang = "pt" if pick == self._t("lang.pt", "portugues") else "en"
+        chosen = self._lang_code_from_choice_label(pick)
+        if chosen is None:
+            try:
+                chosen = ("pt", "en")[opts.index(pick)]
+            except ValueError:
+                chosen = self.lang
+        self.lang = BedWizard._normalize_lang_code(chosen)
+        self._save_wizard_ui_lang()
         self.ui.ok(self._t("lang.ok", "idioma atualizado"))
 
     def visualization_3d_mode(self) -> None:

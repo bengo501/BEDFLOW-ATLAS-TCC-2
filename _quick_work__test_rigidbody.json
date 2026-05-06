@@ -1,23 +1,18 @@
 {
+  "packing_mode": "hexagonal_3d",
+  "generation_backend": "pure_python",
   "bed": {
-    "diameter": 0.05,
+    "r_outer": 0.025,
+    "r_inner": 0.023,
     "height": 0.1,
-    "wall_thickness": 0.0020000000000000018,
     "clearance": 0.01,
     "material": "steel",
     "roughness": 0.0
   },
-  "lids": {
-    "top_type": "flat",
-    "bottom_type": "flat",
-    "top_thickness": 0.003,
-    "bottom_thickness": 0.003,
-    "seal_clearance": 0.001
-  },
   "particles": {
     "kind": "sphere",
+    "count": 25,
     "diameter": 0.0015,
-    "count": 80,
     "target_porosity": 0.4,
     "density": 2500.0,
     "mass": 0.0,
@@ -26,10 +21,19 @@
     "rolling_friction": 0.1,
     "linear_damping": 0.1,
     "angular_damping": 0.1,
-    "seed": 1
+    "seed": 42
+  },
+  "lids": {
+    "top_type": "flat",
+    "bottom_type": "flat",
+    "bottom_thickness": 0.003,
+    "top_thickness": 0.003,
+    "seal_clearance": 0.001
   },
   "packing": {
     "method": "hexagonal_3d",
+    "gap": 0.0001,
+    "strict_validation": false,
     "gravity": -9.81,
     "substeps": 10,
     "iterations": 10,
@@ -37,8 +41,6 @@
     "rest_velocity": 0.01,
     "max_time": 5.0,
     "collision_margin": 0.001,
-    "gap": 0.0001,
-    "strict_validation": true,
     "mesh_segmentos": 24,
     "sphere_lat": 3,
     "sphere_lon": 5
@@ -55,25 +57,9 @@
     "manifold_check": true,
     "merge_distance": 0.001
   },
-  "cfd": {
-    "regime": "laminar",
-    "inlet_velocity": 0.1,
-    "fluid_density": 1.225,
-    "fluid_viscosity": 1.8e-05,
-    "max_iterations": 1000,
-    "convergence_criteria": 1e-06,
-    "write_fields": false
-  },
-  "_metadata": {
-    "hash": "d02e981f",
-    "compiler": "bed_compiler_antlr_standalone",
-    "input_file": "C:\\Users\\joxto\\Downloads\\BEDFLOW-ATLAS-TCC-2\\_test_hex.bed"
-  },
-  "generation_backend": "pure_python",
-  "packing_mode": "hexagonal_3d",
   "slice": {
     "slice_enabled": true,
-    "slice_thickness": 0.002,
+    "slice_thickness": 0.006,
     "slice_axis": "y",
     "slice_position": 0.0,
     "keep_only_intersecting_particles": true,
