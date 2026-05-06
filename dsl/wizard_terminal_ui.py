@@ -6,6 +6,7 @@ usa rich se estiver instalado; caso contrario, modo texto simples compativel.
 from __future__ import annotations
 
 import os
+import textwrap
 from typing import Any, Callable, List, Optional, Sequence, Tuple
 
 try:
@@ -38,6 +39,24 @@ except ImportError:
     _HAS_PROMPT_TOOLKIT = False
 
 MenuRow = Tuple[str, str, str]
+
+
+def _menu_resume_two_lines(text: str, line_width: int) -> str:
+    """quebra o resumo em exatamente 2 linhas (ascii); ellipsis se nao couber tudo."""
+    text = " ".join((text or "").split())
+    if not text:
+        return "\n "
+    w = max(12, int(line_width))
+    wrapped = textwrap.wrap(text, width=w, break_long_words=True, break_on_hyphens=False)
+    if not wrapped:
+        return "\n "
+    if len(wrapped) == 1:
+        return f"{wrapped[0]}\n "
+    first, second = wrapped[0], wrapped[1]
+    if len(wrapped) > 2:
+        room = max(1, w - 3)
+        second = (second[:room] + "...") if len(second) > room else (second + "...")
+    return f"{first}\n{second}"
 
 
 def _wizard_prompt_session() -> Any:
@@ -302,13 +321,15 @@ class PlainWizardUi:
                 return False
             print("  aviso: digite 's' para sim ou 'n' para nao!")
 
-    def render_main_menu(self, rows: Sequence[MenuRow]) -> None:
+    def render_main_menu(self, rows: Sequence[MenuRow], title: str = "opcoes") -> None:
         print()
-        print("  opcoes")
+        print(f"  {title}")
         print("  " + "-" * 56)
         for key, titulo, desc in rows:
+            desc2 = _menu_resume_two_lines(desc, 52)
             print(f"  [{key}]  {titulo}")
-            print(f"       {desc}")
+            for ln in desc2.splitlines():
+                print(f"       {ln}")
             print()
 
     def render_help_section_menu(self, entries: Sequence[Tuple[str, str]], back_key: str = "0") -> None:
@@ -532,16 +553,17 @@ class RichWizardUi:
                 return False
             self.warn("digite 's' para sim ou 'n' para nao!")
 
-    def render_main_menu(self, rows: Sequence[MenuRow]) -> None:
+    def render_main_menu(self, rows: Sequence[MenuRow], title: str = "opcoes") -> None:
         self.console.print()
         table = Table(
             box=box.ROUNDED,
             show_header=True,
+            show_lines=True,
             header_style="bold rgb(240,212,168)",
             border_style="rgb(95,25,35)",
             expand=True,
             pad_edge=True,
-            title="opcoes",
+            title=title,
             title_style="wizard.muted",
         )
         table.add_column(
@@ -560,6 +582,14 @@ class RichWizardUi:
             no_wrap=True,
             overflow="ellipsis",
         )
+        # separador visual entre "modo" e "resumo"
+        table.add_column(
+            "",
+            justify="center",
+            style="wizard.muted",
+            width=1,
+            no_wrap=True,
+        )
         table.add_column(
             "resumo",
             style="wizard.muted",
@@ -567,8 +597,12 @@ class RichWizardUi:
             no_wrap=False,
             overflow="fold",
         )
+        term_w = int(getattr(self.console, "width", None) or 80)
+        # largura aproximada da celula resumo: terminal menos colunas fixas e bordas
+        resume_w = max(16, term_w - 52)
         for key, titulo, desc in rows:
-            table.add_row(key, titulo, desc)
+            desc_cell = _menu_resume_two_lines(desc, resume_w)
+            table.add_row(key, titulo, "|", desc_cell)
         self.console.print(table)
         self.console.print()
 

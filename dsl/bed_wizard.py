@@ -75,36 +75,50 @@ class _WizardCancelled(Exception):
 class BedWizard:
     """classe principal do wizard para criacao de arquivos .bed"""
 
-    # linhas do menu inicial (atalho, titulo, descricao curta)
-    MENU_ROWS: List[Tuple[str, str, str]] = [
+    # menu inicial (atalho, titulo, resumo curto — duas linhas na ui rich)
+    MAIN_MENU_ROWS: List[Tuple[str, str, str]] = [
         (
             "1",
-            "questionario interativo",
-            "perguntas passo a passo; gera .bed; cfd opcional; export configuravel",
+            "comecar",
+            "questionario, templates, testes rapidos, geracao 3d no blender ou pipeline completo",
+        ),
+        ("2", "ajuda", "resumo dos parametros do ficheiro .bed por secao"),
+        (
+            "3",
+            "documentacao",
+            "guia do projeto neste terminal (texto extraido do html)",
+        ),
+        ("4", "sair", "encerrar o wizard"),
+    ]
+
+    # submenu depois de escolher comecar
+    START_MENU_ROWS: List[Tuple[str, str, str]] = [
+        (
+            "1",
+            "assistente inteligente",
+            "perguntas curtas para guiar ao .bed, modelo 3d no blender ou pipeline openfoam",
         ),
         (
             "2",
-            "templates e editor",
-            "template json em dsl/wizard_templates ou edicao manual .bed com editor externo",
+            "questionario interativo",
+            "passo a passo; gera .bed; cfd opcional; export configuravel",
         ),
         (
             "3",
-            "geracao 3d (blender)",
-            "questionario sem cfd; export como no questionario; escolhe como abrir o blender no fim",
+            "templates, editor e testes rapidos",
+            "json em dsl/wizard_templates, editor .bed classico, ou fluxo guiado com ficheiros existentes",
         ),
         (
             "4",
-            "pipeline completo (avancado)",
-            "bed + blender + caso openfoam + simulacao wsl; requer blender, wsl2, openfoam; longo; ~2gb disco",
+            "geracao 3d (blender)",
+            "sem cfd; export como no questionario; escolhe como abrir o blender no fim",
         ),
-        ("5", "ajuda", "resumo dos parametros por secao"),
-        ("6", "documentacao", "guia do projeto neste terminal (texto a partir do html)"),
-        ("7", "sair", "encerrar o wizard"),
         (
-            "8",
-            "testes rapidos",
-            "ficheiro .bed ou .json ja existente; fluxo guiado pure python ou blender",
+            "5",
+            "pipeline completo (avancado)",
+            "bed + blender + caso openfoam + simulacao no wsl; longo; requisitos elevados",
         ),
+        ("0", "voltar", "regressa ao menu principal"),
     ]
 
     # valores iniciais do questionario (para marcar [alt] na lista de revisao)
@@ -1332,8 +1346,14 @@ class BedWizard:
         finally:
             self._cancel_enabled = old
     
-    def template_mode(self):
-        """modo edicao de template - usuario edita um arquivo template padrao"""
+    def template_mode(self, prefer: Optional[str] = None) -> None:
+        """modo edicao de template - usuario edita um arquivo template padrao.
+
+        prefer:
+          None — comportamento original (escolha json vs editor se existirem templates).
+          "json" — forcar fluxo de templates json em dsl/wizard_templates (se existir).
+          "editor" — saltar para o editor .bed classico.
+        """
         self.clear_screen()
         self.print_header("editor de template", "edicao de modelo .bed")
         self.ui.breadcrumbs("wizard", "template")
@@ -1344,13 +1364,15 @@ class BedWizard:
         # nomes dos ficheiros json em dsl wizard templates sem extensao
         json_names = list_template_names()
         # se existir pelo menos um template json oferecemos fluxo rapido sem editor externo
-        if json_names:
-            # usuario escolhe entre carregar json pronto ou cair no editor bed classico
-            modo = self.get_choice(
-                "origem do template",
-                ["ficheiros json em dsl/wizard_templates", "editor .bed classico"],
-                0,
-            )
+        if json_names and prefer != "editor":
+            if prefer == "json":
+                modo = "ficheiros json em dsl/wizard_templates"
+            else:
+                modo = self.get_choice(
+                    "origem do template",
+                    ["ficheiros json em dsl/wizard_templates", "editor .bed classico"],
+                    0,
+                )
             # ramo json carrega dict ja estruturado converte para params do wizard e compila
             if modo.startswith("ficheiros"):
                 # pick e o identificador do template por exemplo default spherical
@@ -1393,7 +1415,12 @@ class BedWizard:
                             self.open_blender_gui_with_stl(stl)
                 # termina template mode neste fluxo sem abrir editor temporario
                 return
-        
+        if prefer == "json" and not json_names:
+            self.ui.warn(
+                "nao ha ficheiros json em dsl/wizard_templates; a seguir para o editor .bed classico."
+            )
+            self.ui.println()
+
         # criar template padrao com valores exemplo
         template = self.create_default_template()
         
@@ -2521,6 +2548,136 @@ cfd {
                     edge_msg = "ja esta na primeira pagina."
                 continue
             idx += 1
+
+    def _draw_start_menu(self) -> None:
+        """submenu comecar (fluxos operacionais)."""
+        self.ui.clear()
+        self.ui.header(
+            "wizard de parametrizacao",
+            "leitos empacotados — arquivos .bed / antlr / blender / openfoam",
+        )
+        self.ui.breadcrumbs("wizard", "comecar")
+        if not rich_available():
+            self.ui.hint("instale rich para cores e tabelas: pip install rich")
+            self.ui.println()
+        if not prompt_toolkit_available():
+            self.ui.hint(
+                "opcional: pip install prompt_toolkit — edicao de linha tipo ide "
+                "(setas, historico, tab)."
+            )
+            self.ui.println()
+        self.ui.render_main_menu(self.START_MENU_ROWS, title="comecar")
+
+    def run_start_menu(self) -> None:
+        """loop do submenu comecar ate o utilizador escolher 0 voltar."""
+        while True:
+            self._draw_start_menu()
+            choice = self.ui.ask_line("opcao (0-5): ").strip()
+            if choice == "0":
+                return
+            if choice == "1":
+                self.smart_start_flow()
+            elif choice == "2":
+                self.interactive_mode()
+            elif choice == "3":
+                self.templates_e_testes_menu()
+            elif choice == "4":
+                self.blender_generation_mode()
+            elif choice == "5":
+                self.pipeline_completo_mode()
+            else:
+                self.ui.warn("escolha um numero de 0 a 5")
+                self.ui.pause("enter...")
+                continue
+            self.ui.pause("enter para voltar ao submenu comecar...")
+
+    def templates_e_testes_menu(self) -> None:
+        """une templates/editor com testes rapidos (submenu)."""
+        while True:
+            self.clear_screen()
+            self.print_header(
+                "templates, editor e testes rapidos",
+                "escolha o fluxo desejado",
+            )
+            self.ui.breadcrumbs("wizard", "comecar", "templates-testes")
+            self.ui.println()
+            fluxo = self.get_choice(
+                "fluxo",
+                [
+                    "carregar template json (dsl/wizard_templates)",
+                    "editor .bed classico (template + editor externo)",
+                    "testes rapidos (ficheiro .bed ou .json ja existente)",
+                    "voltar ao submenu comecar",
+                ],
+                3,
+            )
+            if fluxo.startswith("voltar"):
+                return
+            if fluxo.startswith("testes"):
+                self.tests_quick_menu()
+                self.ui.pause("enter para voltar...")
+                continue
+            if fluxo.startswith("carregar"):
+                self.template_mode(prefer="json")
+                self.ui.pause("enter para voltar...")
+                continue
+            if fluxo.startswith("editor"):
+                self.template_mode(prefer="editor")
+                self.ui.pause("enter para voltar...")
+                continue
+            self.ui.warn("opcao nao reconhecida")
+            self.ui.pause("enter...")
+
+    def smart_start_flow(self) -> None:
+        """assistente curto: encaminha para questionario, 3d no blender ou pipeline."""
+        self.clear_screen()
+        self.print_header(
+            "assistente inteligente",
+            "encaminhamento rapido (os modos explicitos continuam no submenu)",
+        )
+        self.ui.breadcrumbs("wizard", "comecar", "assistente")
+        self.ui.println()
+        objetivo = self.get_choice(
+            "o que pretende fazer agora",
+            [
+                "gerar .bed com questionario completo (cfd opcional)",
+                "gerar modelo 3d sem cfd (mesmo questionario que o modo blender)",
+                "pipeline completo (questionario + blender + openfoam no wsl)",
+            ],
+            0,
+        )
+        if objetivo.startswith("gerar .bed"):
+            self.interactive_mode()
+            return
+        if objetivo.startswith("gerar modelo 3d"):
+            backend = self.get_choice(
+                "backend preferido para o modelo 3d",
+                [
+                    "blender (recomendado para o leito completo neste projeto)",
+                    "python puro (gera .bed no questionario; depois use testes rapidos com o .json)",
+                ],
+                0,
+            )
+            if backend.startswith("blender"):
+                self.blender_generation_mode()
+            else:
+                self.ui.hint(
+                    "fluxo sugerido: questionario interativo para gerar e compilar o .bed; "
+                    "depois menu comecar > templates e testes > testes rapidos com o .json."
+                )
+                self.ui.println()
+                self.interactive_mode()
+            return
+        if objetivo.startswith("pipeline"):
+            self.ui.warn(
+                "requer blender, wsl2 e openfoam; tempo longo e uso elevado de disco."
+            )
+            if self.get_boolean("confirmo requisitos e quero continuar", default=False):
+                self.pipeline_completo_mode()
+            else:
+                self.ui.muted("cancelado no assistente.")
+            return
+        self.ui.warn("opcao nao reconhecida no assistente.")
     
     def _draw_main_menu(self) -> None:
         """tela inicial estilo navegador (barra + tabela de modos)."""
@@ -2535,37 +2692,26 @@ cfd {
                 "(setas, historico, tab)."
             )
             self.ui.println()
-        self.ui.render_main_menu(self.MENU_ROWS)
+        self.ui.render_main_menu(self.MAIN_MENU_ROWS)
     
     def run(self):
         """executar wizard"""
         while True:
             self._draw_main_menu()
-            choice = self.ui.ask_line("opcao (1-8): ").strip()
+            choice = self.ui.ask_line("opcao (1-4): ").strip()
             
             if choice == "1":
-                self.interactive_mode()
+                self.run_start_menu()
                 self.ui.pause("enter para voltar ao menu principal...")
             elif choice == "2":
-                self.template_mode()
-                self.ui.pause("enter para voltar ao menu principal...")
-            elif choice == "3":
-                self.blender_generation_mode()
-                self.ui.pause("enter para voltar ao menu principal...")
-            elif choice == "4":
-                self.pipeline_completo_mode()
-                self.ui.pause("enter para voltar ao menu principal...")
-            elif choice == "5":
                 self.show_help_menu()
-            elif choice == "6":
+            elif choice == "3":
                 self.show_documentation()
-            elif choice == "7":
+            elif choice == "4":
                 self.ui.muted("ate logo!")
                 sys.exit(0)
-            elif choice == "8":
-                self.tests_quick_menu()
             else:
-                self.ui.warn("escolha um numero de 1 a 8")
+                self.ui.warn("escolha um numero de 1 a 4")
                 self.ui.pause("enter para voltar ao menu...")
 
 def main():
