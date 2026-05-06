@@ -44,10 +44,12 @@ from packed_bed_science.packing_modes import (
 from wizard_json_loader import (
     export_formats_for_blender,
     json_to_wizard_params,
+    load_wizard_json,
     normalize_loaded_dict,
     patch_compiled_json_export,
     patch_compiled_json_metadata,
     patch_compiled_json_packing,
+    resolve_repo_path,
 )
 # listar nomes de templates json e carregar um template por nome
 from wizard_quick_tests import run as wizard_quick_tests_run
@@ -463,6 +465,89 @@ class BedWizard:
         tok = (raw or "").strip().lower()
         if tok in ("c", "cancel", "cancelar", "voltar", "back"):
             raise _WizardCancelled()
+
+    def _flatten_params_for_defaults(self) -> Dict[str, str]:
+        # devolve um mapa "secao.campo" -> string para usar como default nas perguntas
+        out: Dict[str, str] = {}
+        for sec, d in (self.params or {}).items():
+            if not isinstance(d, dict):
+                continue
+            for k, v in d.items():
+                key = f"{sec}.{k}"
+                if isinstance(v, bool):
+                    out[key] = "true" if v else "false"
+                elif isinstance(v, (int, float)):
+                    out[key] = str(v)
+                elif isinstance(v, list):
+                    out[key] = ",".join(str(x) for x in v)
+                elif v is None:
+                    continue
+                else:
+                    out[key] = str(v)
+        return out
+
+    def _default_from_loaded(self, key: str, fallback: str) -> str:
+        # se ja temos params carregados, usa-os como default; caso contrario usa fallback
+        flat = self._flatten_params_for_defaults()
+        got = flat.get(key)
+        return got if got not in (None, "") else fallback
+
+    def _load_params_from_bed_path(self, bed_path: Path) -> bool:
+        # compila .bed -> .json e preenche self.params com json_to_wizard_params
+        try:
+            bed_path = Path(bed_path).resolve()
+            if not bed_path.exists():
+                self.ui.err(f"ficheiro nao encontrado: {bed_path}")
+                return False
+            self.output_file = str(bed_path)
+            if not self.verify_and_compile():
+                self.ui.err("nao foi possivel compilar o .bed fornecido")
+                return False
+            jpath = Path(str(bed_path.resolve()) + ".json")
+            if not jpath.exists():
+                self.ui.err(f"json nao encontrado apos compilar: {jpath}")
+                return False
+            data = load_wizard_json(jpath)
+            normalize_loaded_dict(data)
+            self.params = json_to_wizard_params(data)
+            return True
+        except Exception as e:
+            self.ui.err(f"falha ao carregar .bed: {e}")
+            return False
+
+    def _maybe_load_existing_bed(self, *, caption: str) -> None:
+        # pergunta ao utilizador se quer carregar um .bed para pre-preencher o questionario
+        self.ui.hint("opcional: carregar um .bed existente para pre-preencher as perguntas")
+        if not self.get_boolean(f"carregar .bed existente neste modo ({caption})?", default=False):
+            return
+        raw = self.ui.ask_line("caminho .bed (ou numero da lista, vazio cancela): ").strip()
+        if not raw:
+            return
+        # tenta resolver por indice simples: lista beds na pasta raiz + cwd
+        beds: List[Path] = []
+        for base in (Path.cwd(), Path(__file__).resolve().parents[1], Path(__file__).resolve().parent):
+            try:
+                beds.extend(sorted(base.glob("*.bed")))
+            except Exception:
+                pass
+        beds = [p.resolve() for p in dict((str(p.resolve()), p.resolve()) for p in beds).values()]
+        bed_path: Optional[Path] = None
+        if raw.isdigit() and beds:
+            idx = int(raw) - 1
+            if 0 <= idx < len(beds):
+                bed_path = beds[idx]
+        if bed_path is None:
+            try:
+                bed_path = resolve_repo_path(raw, base=Path.cwd())
+            except Exception:
+                bed_path = None
+        if bed_path is None:
+            self.ui.warn("entrada invalida; a seguir sem carregar")
+            return
+        if self._load_params_from_bed_path(bed_path):
+            self.ui.ok(f"carregado: {bed_path.name}")
+        else:
+            self.ui.warn("nao foi possivel carregar; a seguir sem carregar")
 
     def _hint_fluxo_questionario(self) -> None:
         self.ui.muted(
@@ -1197,20 +1282,45 @@ class BedWizard:
         self.params.setdefault("bed", {})
         bd = self.params["bed"]
         bd["diameter"] = self.get_number_input(
-            "diametro do leito", "0.05", "m", True, "bed.diameter"
+            "diametro do leito",
+            self._default_from_loaded("bed.diameter", "0.05"),
+            "m",
+            True,
+            "bed.diameter",
         )
         bd["height"] = self.get_number_input(
-            "altura do leito", "0.1", "m", True, "bed.height"
+            "altura do leito",
+            self._default_from_loaded("bed.height", "0.1"),
+            "m",
+            True,
+            "bed.height",
         )
         bd["wall_thickness"] = self.get_number_input(
-            "espessura da parede", "0.002", "m", True, "bed.wall_thickness"
+            "espessura da parede",
+            self._default_from_loaded("bed.wall_thickness", "0.002"),
+            "m",
+            True,
+            "bed.wall_thickness",
         )
         bd["clearance"] = self.get_number_input(
-            "folga superior", "0.01", "m", True, "bed.clearance"
+            "folga superior",
+            self._default_from_loaded("bed.clearance", "0.01"),
+            "m",
+            True,
+            "bed.clearance",
         )
-        bd["material"] = self.get_input("material da parede", "steel", True, "bed.material")
+        bd["material"] = self.get_input(
+            "material da parede",
+            self._default_from_loaded("bed.material", "steel"),
+            True,
+            "bed.material",
+        )
         bd["roughness"] = self.get_number_input(
-            "rugosidade", "0.0", "m", False, "bed.roughness"
+            "rugosidade",
+            self._default_from_loaded("bed.roughness", "0.0"),
+            "m",
+            False,
+            "bed.roughness",
         )
 
         self.print_section("tampas")
@@ -1224,13 +1334,25 @@ class BedWizard:
             "tipo da tampa inferior", lid_types, 0, "lids.bottom_type"
         )
         ld["top_thickness"] = self.get_number_input(
-            "espessura tampa superior", "0.003", "m", True, "lids.top_thickness"
+            "espessura tampa superior",
+            self._default_from_loaded("lids.top_thickness", "0.003"),
+            "m",
+            True,
+            "lids.top_thickness",
         )
         ld["bottom_thickness"] = self.get_number_input(
-            "espessura tampa inferior", "0.003", "m", True, "lids.bottom_thickness"
+            "espessura tampa inferior",
+            self._default_from_loaded("lids.bottom_thickness", "0.003"),
+            "m",
+            True,
+            "lids.bottom_thickness",
         )
         ld["seal_clearance"] = self.get_number_input(
-            "folga do selo", "0.001", "m", False, "lids.seal_clearance"
+            "folga do selo",
+            self._default_from_loaded("lids.seal_clearance", "0.001"),
+            "m",
+            False,
+            "lids.seal_clearance",
         )
 
         self.print_section("particulas")
@@ -1241,40 +1363,84 @@ class BedWizard:
             "tipo de particula", particle_kinds, 0, "particles.kind"
         )
         pt["diameter"] = self.get_number_input(
-            "diametro das particulas", "0.005", "m", True, "particles.diameter"
+            "diametro das particulas",
+            self._default_from_loaded("particles.diameter", "0.005"),
+            "m",
+            True,
+            "particles.diameter",
         )
         pt["count"] = int(
             self.get_number_input(
-                "numero de particulas", "100", "", True, "particles.count"
+                "numero de particulas",
+                self._default_from_loaded("particles.count", "100"),
+                "",
+                True,
+                "particles.count",
             )
         )
         pt["target_porosity"] = self.get_number_input(
-            "porosidade alvo", "0.4", "", False, "particles.target_porosity"
+            "porosidade alvo",
+            self._default_from_loaded("particles.target_porosity", "0.4"),
+            "",
+            False,
+            "particles.target_porosity",
         )
         pt["density"] = self.get_number_input(
-            "densidade do material", "2500.0", "kg/m3", True, "particles.density"
+            "densidade do material",
+            self._default_from_loaded("particles.density", "2500.0"),
+            "kg/m3",
+            True,
+            "particles.density",
         )
         pt["mass"] = self.get_number_input(
-            "massa das particulas", "0.0", "g", False, "particles.mass"
+            "massa das particulas",
+            self._default_from_loaded("particles.mass", "0.0"),
+            "g",
+            False,
+            "particles.mass",
         )
         pt["restitution"] = self.get_number_input(
-            "coeficiente de restituicao", "0.3", "", False, "particles.restitution"
+            "coeficiente de restituicao",
+            self._default_from_loaded("particles.restitution", "0.3"),
+            "",
+            False,
+            "particles.restitution",
         )
         pt["friction"] = self.get_number_input(
-            "coeficiente de atrito", "0.5", "", False, "particles.friction"
+            "coeficiente de atrito",
+            self._default_from_loaded("particles.friction", "0.5"),
+            "",
+            False,
+            "particles.friction",
         )
         pt["rolling_friction"] = self.get_number_input(
-            "atrito de rolamento", "0.1", "", False, "particles.rolling_friction"
+            "atrito de rolamento",
+            self._default_from_loaded("particles.rolling_friction", "0.1"),
+            "",
+            False,
+            "particles.rolling_friction",
         )
         pt["linear_damping"] = self.get_number_input(
-            "amortecimento linear", "0.1", "", False, "particles.linear_damping"
+            "amortecimento linear",
+            self._default_from_loaded("particles.linear_damping", "0.1"),
+            "",
+            False,
+            "particles.linear_damping",
         )
         pt["angular_damping"] = self.get_number_input(
-            "amortecimento angular", "0.1", "", False, "particles.angular_damping"
+            "amortecimento angular",
+            self._default_from_loaded("particles.angular_damping", "0.1"),
+            "",
+            False,
+            "particles.angular_damping",
         )
         pt["seed"] = int(
             self.get_number_input(
-                "seed para reproducibilidade", "42", "", False, "particles.seed"
+                "seed para reproducibilidade",
+                self._default_from_loaded("particles.seed", "42"),
+                "",
+                False,
+                "particles.seed",
             )
         )
 
@@ -1333,6 +1499,7 @@ class BedWizard:
             self._hint_fluxo_questionario()
             self._hint_controles_entrada()
             self.ui.println()
+            self._maybe_load_existing_bed(caption="questionario")
             self._fill_params_from_questionnaire()
             self.output_file = self.get_input(
                 "nome do arquivo de saida", "meu_leito.bed"
@@ -1845,6 +2012,7 @@ cfd {
         self._hint_fluxo_blender()
         self._hint_controles_entrada()
         self.ui.println()
+        self._maybe_load_existing_bed(caption="geracao 3d (blender)")
         self._questionnaire_blender_bed_lids_particles_packing()
         self._questionnaire_export_section()
         self.ui.hint("secao cfd omitida neste modo")
@@ -2205,6 +2373,7 @@ cfd {
         # usar questionario interativo para coletar parametros
         self.ui.section("etapa 1/5 — parametrizacao do leito")
         try:
+            self._maybe_load_existing_bed(caption="pipeline completo")
             self.interactive_questionnaire()
         except _WizardCancelled:
             self.ui.muted("cancelado. a voltar ao menu inicial")
