@@ -536,7 +536,7 @@ class BedWizard:
     def print_section(self, title: str):
         """imprimir titulo de secao formatado"""
         self.ui.section(title)
-
+    
     def _hint_controles_entrada(self) -> None:
         """texto curto reutilizado nos fluxos com perguntas."""
         extra = ""
@@ -683,17 +683,29 @@ class BedWizard:
             self._print_bed_files_list(beds)
         self.ui.muted(
             "dica: l ou lista = rever lista; numero ou caminho = escolher; "
-            "vazio ou c = nao carregar e continuar o questionario"
+            "n ou enter vazio = continuar sem carregar .bed; "
+            "c = voltar ao menu (cancela o fluxo atual)"
         )
         bed_path: Optional[Path] = None
         while True:
             raw = self.ui.ask_line(
-                "caminho .bed (numero, l=lista, vazio ou c cancela): "
+                "caminho .bed (numero, l=lista, n/vazio sem carregar, c=menu): "
             ).strip()
             if not raw:
                 return
             low = raw.lower()
             if low in ("c", "cancel", "cancelar", "voltar", "back"):
+                raise _WizardCancelled()
+            if low in (
+                "n",
+                "nao",
+                "não",
+                "nao carregar",
+                "sem",
+                "pular",
+                "skip",
+                "no",
+            ):
                 return
             if low in ("l", "lista"):
                 self._print_bed_files_list(beds)
@@ -927,8 +939,8 @@ class BedWizard:
             if value == "*":
                 self._param_review_and_edit_menu()
                 continue
-            if value:
-                return [item.strip() for item in value.split(separator)]
+        if value:
+            return [item.strip() for item in value.split(separator)]
             return []
 
     def _is_questionnaire_value_changed(self, path: str, val: Any) -> bool:
@@ -1929,7 +1941,7 @@ class BedWizard:
                 "nao ha ficheiros json em dsl/wizard_templates; a seguir para o editor .bed classico."
             )
             self.ui.println()
-
+        
         # criar template padrao com valores exemplo
         template = self.create_default_template()
         
@@ -2081,12 +2093,12 @@ cfd {
         if p.is_absolute():
             return
         self.output_file = str((beds_dir() / p).resolve())
-
+    
     def save_bed_file(self):
         """salvar arquivo .bed com conteudo gerado"""
         self._normalize_bed_output_path()
         content = self.generate_bed_content()  # gerar conteudo do arquivo
-
+        
         # escrever arquivo com codificacao utf-8
         with open(self.output_file, 'w', encoding='utf-8') as f:
             f.write(content)
@@ -2824,7 +2836,7 @@ cfd {
         self.ui.println()
         self.ui.warn("tempo estimado 10-30 min | blender | wsl2 + openfoam | ~2 gb disco")
         self.ui.println()
-
+        
         def _pipe_cancel() -> None:
             raise _WizardCancelled()
 
@@ -3151,7 +3163,7 @@ cfd {
             self.ui.muted(f"caminho esperado: {doc_path}")
             self.ui.pause()
             return
-
+        
         texto = html_file_to_plain(doc_path)
         paginas = paginate_plain(texto, lines_per_page=32)
         total = len(paginas)
@@ -3396,7 +3408,7 @@ cfd {
                 self.ui.muted("no menu principal nao ha nivel acima; use 6 para sair.")
                 self.ui.pause("enter...")
                 continue
-
+            
             if choice == "1":
                 self.run_start_menu()
                 self.ui.pause("enter para voltar ao menu principal...")
