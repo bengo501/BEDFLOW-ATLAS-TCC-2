@@ -144,6 +144,20 @@ export const getSystemStatus = async () => {
   return response.data;
 };
 
+// inventario de malhas para o visualizador 3d (stl, obj, ply, gltf, glb, blend)
+export const listViewerMeshes = async ({ q, limit } = {}) => {
+  const params = {};
+  if (q) params.q = q;
+  if (limit != null) params.limit = limit;
+  const response = await api.get('/api/viewer/meshes', { params });
+  return response.data;
+};
+
+export const buildMeshStreamUrl = (meshId) => {
+  if (!meshId) return null;
+  return `${getApiBase()}/api/viewer/mesh-stream?mesh_id=${encodeURIComponent(meshId)}`;
+};
+
 // transforma um caminho relativo dentro de generated em url publica do backend
 export const buildGeneratedFileUrl = (relativePath) => {
   if (!relativePath) return null;

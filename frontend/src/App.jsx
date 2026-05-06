@@ -13,6 +13,7 @@ import ReportsPage from './components/ReportsPage'
 import DatabasePage from './components/DatabasePage'
 import SavedTemplatesPage from './components/SavedTemplatesPage'
 import SettingsPage from './components/SettingsPage'
+import MeshViewer3DPage from './components/MeshViewer3DPage'
 import DevModePanel from './components/DevModePanel'
 import ThemeIcon from './components/ThemeIcon'
 import { HelpModal, DocsModal, CreditsModal } from './components/WizardHelpers'
@@ -27,6 +28,7 @@ import { useActiveUser } from './context/UserContext'
 const SIMPLE_MODE_TABS = new Set([
   'dashboard',
   'wizard',
+  'mesh-viewer',
   'cfd',
   'casos',
   'jobs',
@@ -55,6 +57,7 @@ function App() {
   const [showCredits, setShowCredits] = useState(false)
   const [showUserSwitcher, setShowUserSwitcher] = useState(false)
   const [expandedSections, setExpandedSections] = useState({})
+  const [bootMeshViewerId, setBootMeshViewerId] = useState(null)
   const mainContentRef = useRef(null)
   const settingsAppliedRef = useRef(false)
 
@@ -65,6 +68,23 @@ function App() {
       el.scrollTo({ top: 0, left: 0, behavior: 'auto' })
     }
   }, [activeTab])
+
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search)
+      const id = p.get('meshViewerId')
+      if (id && id.length >= 8) {
+        setBootMeshViewerId(id)
+        setActiveTab('mesh-viewer')
+        const u = new URL(window.location.href)
+        u.searchParams.delete('meshViewerId')
+        const qs = u.searchParams.toString()
+        window.history.replaceState({}, '', `${u.pathname}${qs ? `?${qs}` : ''}${u.hash}`)
+      }
+    } catch (_e) {
+      /* ignore */
+    }
+  }, [])
 
   useEffect(() => {
     const suffix = language === 'pt' ? 'pipeline cfd' : 'cfd pipeline'
@@ -210,6 +230,7 @@ function App() {
     const sectionByTab = {
       dashboard: 'dashboard',
       wizard: 'create',
+      'mesh-viewer': 'dashboard',
       templates: 'templates',
       'templates-saved': 'templates',
       cfd: 'simulation',
@@ -425,6 +446,17 @@ function App() {
               >
                 <ThemeIcon light="analiseLight.png" dark="analiseLight.png" alt="dashboard" className="nav-icon" location="sidebar" />
                 <span className="nav-label">{language === 'pt' ? 'dashboard' : 'dashboard'}</span>
+              </button>
+            </div>
+
+            <div className="nav-section">
+              <button
+                type="button"
+                className={`nav-item nav-item-root nav-item-folder-face ${activeTab === 'mesh-viewer' ? 'active' : ''}`}
+                onClick={() => navigateToTab('mesh-viewer')}
+              >
+                <ThemeIcon light="cfd_gear_white.png" dark="cfd_gear_white.png" alt="3d" className="nav-icon" location="sidebar" />
+                <span className="nav-label">{language === 'pt' ? 'visualização 3d' : '3d viewer'}</span>
               </button>
             </div>
 
@@ -666,6 +698,15 @@ function App() {
             </div>
           )}
 
+          {activeTab === 'mesh-viewer' && (
+            <div className="tab-content">
+              <MeshViewer3DPage
+                language={language}
+                initialMeshId={bootMeshViewerId}
+                onConsumedBootId={() => setBootMeshViewerId(null)}
+              />
+            </div>
+          )}
 
           {activeTab === 'cfd' && (
             <div className="tab-content">

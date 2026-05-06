@@ -89,6 +89,8 @@ class BedWizard:
             "menu.title.start": "comecar",
             "menu.main.start.title": "comecar",
             "menu.main.start.desc": "questionario, templates, testes rapidos, geracao 3d no blender ou pipeline completo",
+            "menu.main.view3d.title": "visualizacao 3d",
+            "menu.main.view3d.desc": "listar malhas geradas; ver no browser (three.js), open3d ou blender",
             "menu.main.help.title": "ajuda",
             "menu.main.help.desc": "resumo dos parametros do ficheiro .bed por secao",
             "menu.main.docs.title": "documentacao",
@@ -109,7 +111,7 @@ class BedWizard:
             "menu.start.pipe.desc": "bed + blender + caso openfoam + simulacao no wsl; longo; requisitos elevados",
             "menu.start.back.title": "voltar",
             "menu.start.back.desc": "regressa ao menu principal",
-            "prompt.main.choice": "opcao (1-5): ",
+            "prompt.main.choice": "opcao (1-6): ",
             "prompt.start.choice": "opcao (0-5): ",
             "lang.header": "idioma",
             "lang.subtitle": "trocar idioma do wizard",
@@ -118,6 +120,18 @@ class BedWizard:
             "lang.pt": "portugues",
             "lang.en": "ingles",
             "lang.ok": "idioma atualizado",
+            "view3d.title": "visualizacao 3d",
+            "view3d.subtitle": "malhas geradas pelo projeto (python, blender, pipeline)",
+            "view3d.crumb": "visualizacao 3d",
+            "view3d.search": "pesquisar (vazio=lista, c=voltar ao menu principal): ",
+            "view3d.table_title": "modelos",
+            "view3d.pick": "numero do modelo (0=recomeçar lista): ",
+            "view3d.preview": "resumo",
+            "view3d.choose_dest": "onde visualizar",
+            "view3d.opt.web": "navegador (three.js no frontend)",
+            "view3d.opt.desktop": "visualizador desktop (open3d: stl/obj/ply)",
+            "view3d.opt.blender": "abrir no blender",
+            "view3d.opt.back": "voltar a lista",
         },
         "en": {
             "app.title": "parameter wizard",
@@ -126,6 +140,8 @@ class BedWizard:
             "menu.title.start": "start",
             "menu.main.start.title": "start",
             "menu.main.start.desc": "questionnaire, templates, quick tests, 3d generation in blender or full pipeline",
+            "menu.main.view3d.title": "3d visualization",
+            "menu.main.view3d.desc": "list generated meshes; open in browser (three.js), open3d or blender",
             "menu.main.help.title": "help",
             "menu.main.help.desc": "summary of .bed parameters by section",
             "menu.main.docs.title": "documentation",
@@ -146,7 +162,7 @@ class BedWizard:
             "menu.start.pipe.desc": "bed + blender + openfoam case + wsl simulation; long; heavy requirements",
             "menu.start.back.title": "back",
             "menu.start.back.desc": "return to main menu",
-            "prompt.main.choice": "choice (1-5): ",
+            "prompt.main.choice": "choice (1-6): ",
             "prompt.start.choice": "choice (0-5): ",
             "lang.header": "language",
             "lang.subtitle": "change wizard language",
@@ -155,6 +171,18 @@ class BedWizard:
             "lang.pt": "portuguese",
             "lang.en": "english",
             "lang.ok": "language updated",
+            "view3d.title": "3d visualization",
+            "view3d.subtitle": "meshes from python, blender or full pipeline",
+            "view3d.crumb": "3d view",
+            "view3d.search": "search (empty=list, c=back to main menu): ",
+            "view3d.table_title": "models",
+            "view3d.pick": "model number (0=refresh list): ",
+            "view3d.preview": "summary",
+            "view3d.choose_dest": "open in",
+            "view3d.opt.web": "browser (three.js)",
+            "view3d.opt.desktop": "desktop viewer (open3d: stl/obj/ply)",
+            "view3d.opt.blender": "open in blender",
+            "view3d.opt.back": "back to list",
         },
     }
 
@@ -168,10 +196,11 @@ class BedWizard:
     def _main_menu_rows(self) -> List[Tuple[str, str, str]]:
         return [
             ("1", self._t("menu.main.start.title", "comecar"), self._t("menu.main.start.desc", "")),
-            ("2", self._t("menu.main.help.title", "ajuda"), self._t("menu.main.help.desc", "")),
-            ("3", self._t("menu.main.docs.title", "documentacao"), self._t("menu.main.docs.desc", "")),
-            ("4", self._t("menu.main.exit.title", "sair"), self._t("menu.main.exit.desc", "")),
+            ("2", self._t("menu.main.view3d.title", "visualizacao 3d"), self._t("menu.main.view3d.desc", "")),
+            ("3", self._t("menu.main.help.title", "ajuda"), self._t("menu.main.help.desc", "")),
+            ("4", self._t("menu.main.docs.title", "documentacao"), self._t("menu.main.docs.desc", "")),
             ("5", self._t("menu.main.lang.title", "idioma"), self._t("menu.main.lang.desc", "")),
+            ("6", self._t("menu.main.exit.title", "sair"), self._t("menu.main.exit.desc", "")),
         ]
 
     def _start_menu_rows(self) -> List[Tuple[str, str, str]]:
@@ -2979,28 +3008,36 @@ cfd {
         )
         self.lang = "pt" if pick == self._t("lang.pt", "portugues") else "en"
         self.ui.ok(self._t("lang.ok", "idioma atualizado"))
+
+    def visualization_3d_mode(self) -> None:
+        from wizard_3d_viewer import run_visualization_mode
+
+        run_visualization_mode(self)
     
     def run(self):
         """executar wizard"""
         while True:
             self._draw_main_menu()
-            choice = self.ui.ask_line(self._t("prompt.main.choice", "opcao (1-5): ")).strip()
+            choice = self.ui.ask_line(self._t("prompt.main.choice", "opcao (1-6): ")).strip()
             
             if choice == "1":
                 self.run_start_menu()
                 self.ui.pause("enter para voltar ao menu principal...")
             elif choice == "2":
-                self.show_help_menu()
+                self.visualization_3d_mode()
+                self.ui.pause("enter para voltar ao menu principal...")
             elif choice == "3":
-                self.show_documentation()
+                self.show_help_menu()
             elif choice == "4":
-                self.ui.muted("ate logo!")
-                sys.exit(0)
+                self.show_documentation()
             elif choice == "5":
                 self.language_mode()
                 self.ui.pause("enter para voltar ao menu principal...")
+            elif choice == "6":
+                self.ui.muted("ate logo!")
+                sys.exit(0)
             else:
-                self.ui.warn("escolha um numero de 1 a 5")
+                self.ui.warn("escolha um numero de 1 a 6")
                 self.ui.pause("enter para voltar ao menu...")
 
 def main():

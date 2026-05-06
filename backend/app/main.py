@@ -76,6 +76,9 @@ app.include_router(routes_settings.router, prefix="/api")
 from backend.app.api import routes_admin
 app.include_router(routes_admin.router, prefix="/api")
 
+from backend.app.api import routes_viewer
+app.include_router(routes_viewer.router, prefix="/api")
+
 
 @app.on_event("startup")
 async def on_startup():

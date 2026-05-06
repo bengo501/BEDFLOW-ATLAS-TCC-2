@@ -2,3 +2,5 @@ numpy==1.26.4
 PyOpenGL==3.1.7
 glfw==2.7.0
 
+# visualizador desktop opcional (mesh_viewer_desktop.py / modo cli)
+# open3d>=0.18.0
