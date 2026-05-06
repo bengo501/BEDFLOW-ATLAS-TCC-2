@@ -34,6 +34,7 @@ from __future__ import annotations
 import json
 import sys
 import time
+import math
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -78,7 +79,13 @@ from bed_config import (  # noqa: E402
     resolve_bed_geometry_numbers,
 )
 from pure_bed_mesh import build_packed_bed_model, export_model_data  # noqa: E402
-from stl_mesh_utils import merge_mesh, uv_sphere, write_stl_binary  # noqa: E402
+from stl_mesh_utils import (  # noqa: E402
+    cylinder_axis,
+    filter_faces_by_slab,
+    merge_mesh,
+    uv_sphere,
+    write_stl_binary,
+)
 
 # alias de tipo para tripla de floats xyz
 vec3 = Tuple[float, float, float]
@@ -179,6 +186,20 @@ def load_bed_json(path: Path) -> Dict[str, Any]:
     # gap e o valor que define a folga minima entre esferas
     # ele entra tanto na geracao como na validacao
 
+    slice_raw = data.get("slice") if isinstance(data, dict) else None
+    slice_cfg = dict(slice_raw) if isinstance(slice_raw, dict) else {}
+    # compatibilidade: aceitar chaves soltas na raiz
+    for k in (
+        "slice_enabled",
+        "slice_thickness",
+        "slice_axis",
+        "slice_position",
+        "keep_only_intersecting_particles",
+        "preserve_original_packing",
+    ):
+        if isinstance(data, dict) and k in data and k not in slice_cfg:
+            slice_cfg[k] = data.get(k)
+
     # chaves abaixo alimentam tanto o modo cientifico como o legacy
     return {
         "diameter": diameter,
@@ -203,6 +224,7 @@ def load_bed_json(path: Path) -> Dict[str, Any]:
         "generation_backend": normalize_generation_backend(
             data.get("generation_backend") if isinstance(data, dict) else None
         ),
+        "slice": slice_cfg,
     }
 
 
@@ -419,19 +441,91 @@ def _science_generate_stl(p: Dict[str, Any], out_stl: Path) -> None:
 
     # segmentos do cilindro limitados para nao explodir memoria
     seg = min(64, max(12, p.get("mesh_segmentos", 48)))
-    # monta malha unificada tubo tampas esferas
-    packed = build_packed_bed_model(
-        r_ext=r_ext,
-        r_int=r_int,
-        height=altura,
-        bottom_cap_thickness=tb,
-        top_cap_thickness=tt,
-        sphere_centers=centers,
-        sphere_radius=r_s,
-        segmentos_cil=seg,
-        lat_sphere=p["sphere_lat"],
-        lon_sphere=p["sphere_lon"],
-    )
+    slice_cfg = dict(p.get("slice") or {})
+    slice_enabled = _coerce_bool(slice_cfg.get("slice_enabled"), False)
+    if not slice_enabled:
+        packed = build_packed_bed_model(
+            r_ext=r_ext,
+            r_int=r_int,
+            height=altura,
+            bottom_cap_thickness=tb,
+            top_cap_thickness=tt,
+            sphere_centers=centers,
+            sphere_radius=r_s,
+            segmentos_cil=seg,
+            lat_sphere=p["sphere_lat"],
+            lon_sphere=p["sphere_lon"],
+        )
+    else:
+        axis = str(slice_cfg.get("slice_axis") or "y").strip().lower()
+        if axis not in ("x", "y", "z"):
+            axis = "y"
+        thickness = _to_float(slice_cfg.get("slice_thickness"), r_s * 0.6)
+        if thickness <= 0:
+            thickness = r_s * 0.6
+        pos = _to_float(slice_cfg.get("slice_position"), 0.0)
+        keep_only = _coerce_bool(slice_cfg.get("keep_only_intersecting_particles"), True)
+        preserve = _coerce_bool(slice_cfg.get("preserve_original_packing"), True)
+
+        # parede+tampas
+        shell = build_packed_bed_model(
+            r_ext=r_ext,
+            r_int=r_int,
+            height=altura,
+            bottom_cap_thickness=tb,
+            top_cap_thickness=tt,
+            sphere_centers=[],
+            sphere_radius=r_s,
+            segmentos_cil=seg,
+            lat_sphere=p["sphere_lat"],
+            lon_sphere=p["sphere_lon"],
+        )
+        min_v = pos - thickness / 2.0
+        max_v = pos + thickness / 2.0
+        v_shell, f_shell = filter_faces_by_slab(
+            shell.mesh.vertices,
+            shell.mesh.faces,
+            axis=axis,
+            min_v=min_v,
+            max_v=max_v,
+        )
+
+        # particulas como cilindros achatados (discos)
+        ai = 0 if axis == "x" else (1 if axis == "y" else 2)
+        v_all: List[vec3] = list(v_shell)
+        f_all: List[tri] = list(f_shell)
+        for (x, y, z) in centers:
+            coord = (x, y, z)[ai]
+            d = abs(coord - pos)
+            if d > (r_s + thickness / 2.0):
+                if keep_only:
+                    continue
+                continue
+            rs = math.sqrt(max(0.0, r_s * r_s - d * d))
+            if rs <= 0:
+                continue
+            if preserve:
+                cx, cy, cz = x, y, z
+            else:
+                if axis == "x":
+                    cx, cy, cz = pos, y, z
+                elif axis == "y":
+                    cx, cy, cz = x, pos, z
+                else:
+                    cx, cy, cz = x, y, pos
+            cv, cf = cylinder_axis(
+                cx,
+                cy,
+                cz,
+                rs,
+                thickness,
+                axis=axis,
+                segments=max(12, int(seg)),
+            )
+            v_all, f_all = merge_mesh(v_all, f_all, cv, cf)
+
+        # packed minimal para sidecar
+        packed = type(shell)(mesh=type(shell.mesh)(vertices=v_all, faces=f_all), meta=shell.meta)  # type: ignore
 
     preview_n = 12
     gen_public = {k: v for k, v in gen.items() if k != "centers"}
@@ -469,6 +563,8 @@ def _science_generate_stl(p: Dict[str, Any], out_stl: Path) -> None:
     }
     # json opcional com mesmo nome base que stl mais sufixo pure bed
     out_json = out_stl.parent / f"{out_stl.stem}_pure_bed.json"
+    if slice_enabled:
+        extra["slice"] = slice_cfg
     export_model_data(packed, out_stl, out_json=out_json, extra=extra)
 
 

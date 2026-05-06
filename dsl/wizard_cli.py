@@ -23,6 +23,7 @@ from wizard_json_loader import (  # noqa: E402
     normalize_loaded_dict,
     parse_spec,
     patch_compiled_json_export,
+    patch_compiled_json_slice,
     patch_compiled_json_metadata,
     patch_compiled_json_packing,
     resolve_repo_path,
@@ -89,6 +90,44 @@ def build_arg_parser() -> argparse.ArgumentParser:
         "--pure-python",
         action="store_true",
         help="apos json final usar gerador packed_bed_stl em python puro",
+    )
+    p.add_argument(
+        "--slice",
+        action="store_true",
+        help="ativar thin slice (pseudo 2d) no json final",
+    )
+    p.add_argument(
+        "--slice-thickness",
+        type=float,
+        default=0.002,
+        help="espessura da fatia (m)",
+    )
+    p.add_argument(
+        "--slice-axis",
+        type=str,
+        default="y",
+        help="eixo normal do corte (x|y|z)",
+    )
+    p.add_argument(
+        "--slice-position",
+        type=float,
+        default=0.0,
+        help="posicao central da fatia (m)",
+    )
+    p.add_argument(
+        "--slice-keep-only",
+        action="store_true",
+        help="remover particulas fora da fatia (default)",
+    )
+    p.add_argument(
+        "--slice-keep-all",
+        action="store_true",
+        help="nao remover particulas fora da fatia",
+    )
+    p.add_argument(
+        "--slice-recenter",
+        action="store_true",
+        help="recentrar particulas no plano do corte (preserve_original_packing=false)",
     )
     return p
 
@@ -160,6 +199,24 @@ def run_cli(wizard: Any, argv: Optional[list[str]] = None) -> int:
 
     wizard.params = json_to_wizard_params(data)
 
+    # flags de thin slice (pseudo 2d)
+    if args.slice:
+        axis = str(args.slice_axis or "y").strip().lower()
+        if axis not in ("x", "y", "z"):
+            axis = "y"
+        keep_only = True
+        if args.slice_keep_all:
+            keep_only = False
+        preserve = not bool(args.slice_recenter)
+        wizard.params["slice"] = {
+            "slice_enabled": True,
+            "slice_thickness": float(args.slice_thickness),
+            "slice_axis": axis,
+            "slice_position": float(args.slice_position),
+            "keep_only_intersecting_particles": bool(keep_only),
+            "preserve_original_packing": bool(preserve),
+        }
+
     if args.output_bed:
         out_bed = resolve_repo_path(args.output_bed)
     else:
@@ -179,6 +236,8 @@ def run_cli(wizard: Any, argv: Optional[list[str]] = None) -> int:
             else (Path.cwd() / "cli_run.json").resolve()
         )
         disk = _cli_json_for_disk(data, wizard.params)
+        if wizard.params.get("slice"):
+            disk["slice"] = wizard.params["slice"]
         with out_json.open("w", encoding="utf-8") as f:
             json.dump(disk, f, indent=2, ensure_ascii=False)
         wizard.output_file = str(out_bed)
@@ -230,6 +289,7 @@ def run_cli(wizard: Any, argv: Optional[list[str]] = None) -> int:
     patch_compiled_json_packing(json_path, wizard.params)
     patch_compiled_json_export(json_path, wizard.params)
     patch_compiled_json_metadata(json_path, wizard.params)
+    patch_compiled_json_slice(json_path, wizard.params)
 
     want_pure = _wants_pure_python(args, wizard.params)
     want_blender = args.run_blender or args.open_blender

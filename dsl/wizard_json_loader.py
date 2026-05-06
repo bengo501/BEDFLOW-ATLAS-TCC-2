@@ -309,6 +309,19 @@ def patch_compiled_json_metadata(
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
+def patch_compiled_json_slice(json_path: Path, wizard_params: Dict[str, Any]) -> None:
+    # guarda configuracao de thin slice no json compilado
+    # a gramatica bed nao conhece esta secao, entao ela so existe se o wizard a adicionou
+    ws = wizard_params.get("slice")
+    if not isinstance(ws, dict) or not ws:
+        return
+    with json_path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+    data["slice"] = ws
+    with json_path.open("w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+
+
 def export_formats_for_blender(export_section: Dict[str, Any]) -> str:
     # o argparse do leito_extracao espera uma string com formatos separados por virgula
     # nomes validos incluem blend stl gltf glb obj fbx

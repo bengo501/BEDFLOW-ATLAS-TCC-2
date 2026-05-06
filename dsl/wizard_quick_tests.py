@@ -49,6 +49,7 @@ from wizard_json_loader import (
     load_wizard_json,
     parse_spec,
     patch_compiled_json_export,
+    patch_compiled_json_slice,
     patch_compiled_json_metadata,
     patch_compiled_json_packing,
     resolve_repo_path,
@@ -204,6 +205,33 @@ def _exec_label(key: str) -> str:
     return "completa (.bed + json + modelo)" if key == "2" else "rapida (apenas modelo 3d)"
 
 
+def _ask_slice(ui: Any) -> Dict[str, Any]:
+    # thin slice opcional para testes rapidos
+    if not ui.confirm("ativar thin slice (pseudo 2d)?", default=False):
+        return {}
+    axis = ui.pick_from_list("eixo do corte", ["x", "y", "z"], 1)
+    thick = ui.ask_line("espessura da fatia (m) [0.002]: ", default="0.002").strip() or "0.002"
+    pos = ui.ask_line("posicao central (m) [0.0]: ", default="0.0").strip() or "0.0"
+    keep_only = ui.confirm("manter apenas particulas que intersectam?", default=True)
+    preserve = ui.confirm("preservar coordenadas originais?", default=True)
+    try:
+        thick_f = float(thick)
+    except Exception:
+        thick_f = 0.002
+    try:
+        pos_f = float(pos)
+    except Exception:
+        pos_f = 0.0
+    return {
+        "slice_enabled": True,
+        "slice_thickness": thick_f,
+        "slice_axis": str(axis).strip().lower(),
+        "slice_position": pos_f,
+        "keep_only_intersecting_particles": bool(keep_only),
+        "preserve_original_packing": bool(preserve),
+    }
+
+
 def format_equivalent_test_command(
     *,
     input_path: Path,
@@ -239,6 +267,7 @@ def execute_quick_test_noninteractive(
     quick: bool = True,
     open_blender: bool = False,
     verbose: bool = False,
+    slice_cfg: Optional[Dict[str, Any]] = None,
 ) -> Tuple[int, str, str]:
     # mesmo pipeline do run interativo sem perguntas nem pausa no fim
     # usado pelo comando typer bedwizard test
@@ -292,7 +321,13 @@ def execute_quick_test_noninteractive(
             generation_backend=backend_final,
         )
         data_final = load_wizard_json(work_json)
+        if slice_cfg:
+            data_final["slice"] = slice_cfg
+            with work_json.open("w", encoding="utf-8") as f:
+                json.dump(data_final, f, indent=2, ensure_ascii=False)
         wizard.params = json_to_wizard_params(data_final)
+        if slice_cfg:
+            wizard.params["slice"] = slice_cfg
 
     if verbose:
         render_technical_before(
@@ -337,6 +372,7 @@ def execute_quick_test_noninteractive(
             patch_compiled_json_packing(run_json, wizard.params)
             patch_compiled_json_export(run_json, wizard.params)
             patch_compiled_json_metadata(run_json, wizard.params)
+            patch_compiled_json_slice(run_json, wizard.params)
 
     # post key dois abre gui logo tres nunca abre um modo cli nao pergunta interativamente
     post_key = "2" if open_blender else "3"
@@ -674,6 +710,9 @@ def run(wizard: "BedWizard") -> None:
     pk = _prompt_choice(ui, _default_packing_key(data_preview), ["1", "2", "3"])
     packing = _map_packing(pk)
 
+    render_step_title(console, "3b", "thin slice (pseudo 2d)")
+    slice_cfg = _ask_slice(ui)
+
     render_step_title(console, "4", "tipo de execucao")
     render_choice_table(
         console,
@@ -708,7 +747,14 @@ def run(wizard: "BedWizard") -> None:
             generation_backend=backend,
         )
         data_final = load_wizard_json(work_json)
+        if slice_cfg:
+            data_final["slice"] = slice_cfg
+            # persistir no json de trabalho para blender/pure python lerem
+            with work_json.open("w", encoding="utf-8") as f:
+                json.dump(data_final, f, indent=2, ensure_ascii=False)
         wizard.params = json_to_wizard_params(data_final)
+        if slice_cfg:
+            wizard.params["slice"] = slice_cfg
 
     cfg = QuickTestConfig(
         input_is_json=input_is_json,
@@ -779,6 +825,7 @@ def run(wizard: "BedWizard") -> None:
             patch_compiled_json_packing(run_json, wizard.params)
             patch_compiled_json_export(run_json, wizard.params)
             patch_compiled_json_metadata(run_json, wizard.params)
+            patch_compiled_json_slice(run_json, wizard.params)
 
     if backend == "pure_python":
         # stem inclui sufixo bed no json compilado entao o nome stl pode ser longo

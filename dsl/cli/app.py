@@ -31,6 +31,13 @@ _LEGACY_FLAGS = frozenset(
         "--skip-compile",
         "--output-json",
         "--pure-python",
+        "--slice",
+        "--slice-thickness",
+        "--slice-axis",
+        "--slice-position",
+        "--slice-keep-only",
+        "--slice-keep-all",
+        "--slice-recenter",
     }
 )
 
@@ -159,6 +166,36 @@ def cmd_test(
         "--show-equivalent/--no-show-equivalent",
         help="mostrar comando equivalente ao fim",
     ),
+    slice_enabled: bool = typer.Option(
+        False,
+        "--slice/--no-slice",
+        help="ativar thin slice (pseudo 2d) no json de trabalho",
+    ),
+    slice_thickness: float = typer.Option(
+        0.002,
+        "--slice-thickness",
+        help="espessura da fatia (m)",
+    ),
+    slice_axis: str = typer.Option(
+        "y",
+        "--slice-axis",
+        help="eixo normal do corte (x|y|z)",
+    ),
+    slice_position: float = typer.Option(
+        0.0,
+        "--slice-position",
+        help="posicao central da fatia (m) no eixo do corte",
+    ),
+    keep_only_intersecting_particles: bool = typer.Option(
+        True,
+        "--slice-keep-only/--slice-keep-all",
+        help="remover particulas fora da fatia",
+    ),
+    preserve_original_packing: bool = typer.Option(
+        True,
+        "--slice-preserve/--slice-recenter",
+        help="preservar coordenadas originais (senao recentra no plano)",
+    ),
 ) -> None:
     """testes rapidos com json ou bed backend pure ou blender e preview rich"""
     from bed_wizard import BedWizard
@@ -190,6 +227,18 @@ def cmd_test(
         quick=quick,
         open_blender=open_blender,
         verbose=verbose,
+        slice_cfg=(
+            {
+                "slice_enabled": True,
+                "slice_thickness": float(slice_thickness),
+                "slice_axis": str(slice_axis).strip().lower(),
+                "slice_position": float(slice_position),
+                "keep_only_intersecting_particles": bool(keep_only_intersecting_particles),
+                "preserve_original_packing": bool(preserve_original_packing),
+            }
+            if slice_enabled
+            else None
+        ),
     )
     if code == 0 and show_equivalent:
         print_equivalent_command(
@@ -225,6 +274,24 @@ def cmd_generate(
     no_prompt: bool = typer.Option(True, "--no-prompt/--prompt", help="sem perguntas no fim"),
     dry_run: bool = typer.Option(False, "--dry-run", help="so mostrar o que faria"),
     verbose: bool = typer.Option(False, "--verbose", "-v"),
+    slice_enabled: bool = typer.Option(
+        False,
+        "--slice/--no-slice",
+        help="ativar thin slice (pseudo 2d) no json final",
+    ),
+    slice_thickness: float = typer.Option(0.002, "--slice-thickness", help="espessura da fatia (m)"),
+    slice_axis: str = typer.Option("y", "--slice-axis", help="eixo normal do corte (x|y|z)"),
+    slice_position: float = typer.Option(0.0, "--slice-position", help="posicao central da fatia (m)"),
+    keep_only_intersecting_particles: bool = typer.Option(
+        True,
+        "--slice-keep-only/--slice-keep-all",
+        help="remover particulas fora da fatia",
+    ),
+    preserve_original_packing: bool = typer.Option(
+        True,
+        "--slice-preserve/--slice-recenter",
+        help="preservar coordenadas originais (senao recentra no plano)",
+    ),
 ) -> None:
     """gerar bed compilar e opcionalmente stl pure ou cena blender"""
     if dry_run:
@@ -250,6 +317,12 @@ def cmd_generate(
         no_prompt=no_prompt,
         skip_compile=skip_compile,
         pure_python=pure_python,
+        slice_enabled=slice_enabled,
+        slice_thickness=float(slice_thickness),
+        slice_axis=str(slice_axis).strip().lower(),
+        slice_position=float(slice_position),
+        slice_keep_only=bool(keep_only_intersecting_particles),
+        slice_preserve=bool(preserve_original_packing),
     )
     if verbose:
         render_info("argv interno", " ".join(argv))

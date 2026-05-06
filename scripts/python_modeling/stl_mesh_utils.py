@@ -70,6 +70,117 @@ def merge_mesh(
     return va + vb, fa + [(a + off, b + off, c + off) for a, b, c in fb]
 
 
+def cylinder_axis(
+    cx: float,
+    cy: float,
+    cz: float,
+    radius: float,
+    height: float,
+    *,
+    axis: str = "y",
+    segments: int = 24,
+) -> Tuple[List[vec3], List[tri]]:
+    # cilindro com tampas, orientado ao longo de x/y/z
+    # usado para representar a fatia fina (disco/cilindro achatado) de uma esfera
+    if radius <= 0 or height <= 0 or segments < 3:
+        return [], []
+    a = axis.strip().lower()
+    if a not in ("x", "y", "z"):
+        a = "y"
+    h2 = height / 2.0
+
+    def make_point(ang: float, t: float) -> vec3:
+        c = math.cos(ang) * radius
+        s = math.sin(ang) * radius
+        if a == "y":
+            return (cx + c, cy + t, cz + s)
+        if a == "x":
+            return (cx + t, cy + c, cz + s)
+        return (cx + c, cy + s, cz + t)
+
+    verts: List[vec3] = []
+    faces: List[tri] = []
+    # centros das tampas
+    if a == "y":
+        cb = (cx, cy - h2, cz)
+        ct = (cx, cy + h2, cz)
+    elif a == "x":
+        cb = (cx - h2, cy, cz)
+        ct = (cx + h2, cy, cz)
+    else:
+        cb = (cx, cy, cz - h2)
+        ct = (cx, cy, cz + h2)
+    verts.append(cb)  # 0
+    verts.append(ct)  # 1
+
+    base_ring = 2
+    # aneis inferior e superior
+    for i in range(segments):
+        ang = 2 * math.pi * i / segments
+        verts.append(make_point(ang, -h2))
+    for i in range(segments):
+        ang = 2 * math.pi * i / segments
+        verts.append(make_point(ang, +h2))
+
+    def ni(i: int) -> int:
+        return (i + 1) % segments
+
+    rb = lambda i: base_ring + i
+    rt = lambda i: base_ring + segments + i
+    # disco inferior
+    for i in range(segments):
+        j = ni(i)
+        faces.append((0, rb(i), rb(j)))
+    # disco superior
+    for i in range(segments):
+        j = ni(i)
+        faces.append((1, rt(j), rt(i)))
+    # lateral
+    for i in range(segments):
+        j = ni(i)
+        faces.append((rb(i), rt(i), rt(j)))
+        faces.append((rb(i), rt(j), rb(j)))
+
+    return verts, faces
+
+
+def filter_faces_by_slab(
+    vertices: List[vec3],
+    faces: List[tri],
+    *,
+    axis: str,
+    min_v: float,
+    max_v: float,
+) -> Tuple[List[vec3], List[tri]]:
+    # mantem triangulos que intersectam a faixa [min_v, max_v]
+    # criterio simples: intervalo dos 3 vertices sobrepoe o intervalo da fatia
+    # isto corta a parede e tampas para formar uma fatia fina (sem cap automatico)
+    a = axis.strip().lower()
+    if a not in ("x", "y", "z"):
+        a = "y"
+    ai = 0 if a == "x" else (1 if a == "y" else 2)
+    keep_faces: List[tri] = []
+    used: List[int] = []
+    used_set = set()
+    for (i, j, k) in faces:
+        vi = vertices[i][ai]
+        vj = vertices[j][ai]
+        vk = vertices[k][ai]
+        tri_min = min(vi, vj, vk)
+        tri_max = max(vi, vj, vk)
+        if tri_max >= min_v and tri_min <= max_v:
+            keep_faces.append((i, j, k))
+            for idx in (i, j, k):
+                if idx not in used_set:
+                    used_set.add(idx)
+                    used.append(idx)
+    # remap compacto
+    remap = {old: new for new, old in enumerate(used)}
+    new_verts = [vertices[i] for i in used]
+    new_faces = [(remap[i], remap[j], remap[k]) for (i, j, k) in keep_faces]
+    return new_verts, new_faces
+
+
 def write_stl_binary(path: Path, vertices: List[vec3], faces: List[tri]) -> None:
     # funcao write_stl_binary
     # grava ficheiro stl binario padrao com uma normal por triangulo

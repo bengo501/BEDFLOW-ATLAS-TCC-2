@@ -21,6 +21,12 @@ def build_generate_argv(
     no_prompt: bool = True,
     skip_compile: bool = False,
     pure_python: bool = False,
+    slice_enabled: bool = False,
+    slice_thickness: float = 0.002,
+    slice_axis: str = "y",
+    slice_position: float = 0.0,
+    slice_keep_only: bool = True,
+    slice_preserve: bool = True,
 ) -> List[str]:
     # argv e a lista de strings que simula sys argv depois do nome do programa
     argv: List[str] = []
@@ -49,6 +55,15 @@ def build_generate_argv(
         argv.append("--no-prompt")
     if pure_python:
         argv.append("--pure-python")
+    if slice_enabled:
+        argv.append("--slice")
+        argv.extend(["--slice-thickness", str(slice_thickness)])
+        argv.extend(["--slice-axis", str(slice_axis)])
+        argv.extend(["--slice-position", str(slice_position)])
+        if not slice_keep_only:
+            argv.append("--slice-keep-all")
+        if not slice_preserve:
+            argv.append("--slice-recenter")
     return argv
 
 

@@ -391,6 +391,53 @@ def _coerce_bool(v, default=True):
     return default
 
 
+def aplicar_thin_slice(slice_cfg: dict, *, altura: float, raio_ext: float) -> None:
+    # aplica um corte booleano (intersect) com um cubo fino para manter apenas uma fatia 3d
+    # eixo do corte define o eixo normal da fatia (x/y/z)
+    if not isinstance(slice_cfg, dict):
+        return
+    if not _coerce_bool(slice_cfg.get("slice_enabled"), False):
+        return
+    axis = str(slice_cfg.get("slice_axis") or "y").strip().lower()
+    if axis not in ("x", "y", "z"):
+        axis = "y"
+    thickness = _coerce_float(slice_cfg.get("slice_thickness"), 0.002)
+    if thickness <= 0:
+        thickness = 0.002
+    pos = _coerce_float(slice_cfg.get("slice_position"), 0.0)
+
+    # dimensoes grandes para cobrir o modelo todo, exceto na direcao do corte
+    big = max(altura * 2.0, raio_ext * 4.0, 1.0)
+    dims = [big, big, big]
+    ai = 0 if axis == "x" else (1 if axis == "y" else 2)
+    dims[ai] = thickness
+    loc = [0.0, 0.0, altura / 2.0]
+    loc[ai] = pos
+
+    bpy.ops.mesh.primitive_cube_add(size=1.0, location=tuple(loc))
+    cutter = bpy.context.active_object
+    cutter.name = "thin_slice_cutter"
+    cutter.scale = (dims[0] / 2.0, dims[1] / 2.0, dims[2] / 2.0)
+
+    # aplicar boolean intersect em todos os meshes exceto o cutter
+    targets = [o for o in bpy.data.objects if o.type == "MESH" and o.name != cutter.name]
+    for obj in targets:
+        try:
+            mod = obj.modifiers.new(name="thin_slice", type="BOOLEAN")
+            mod.operation = "INTERSECT"
+            mod.object = cutter
+            bpy.context.view_layer.objects.active = obj
+            bpy.ops.object.modifier_apply(modifier=mod.name)
+        except Exception as e:
+            print(f"aviso: boolean falhou em {obj.name}: {e}")
+
+    # remover cutter
+    try:
+        bpy.data.objects.remove(cutter, do_unlink=True)
+    except Exception:
+        pass
+
+
 def _salvar_relatorio_packing(output_path: Path, relatorio: dict):
     # grava metricas de empacotamento ao lado do arquivo blend pedido
     # o nome segue o stem do blend mais sufixo packing report
@@ -540,6 +587,9 @@ def main_com_parametros():
     particles_raw = params.get("particles") or {}
     lids_raw = params.get("lids") or {}
     packing_raw = params.get("packing") or {}
+    slice_cfg = params.get("slice") if isinstance(params, dict) else None
+    if not isinstance(slice_cfg, dict):
+        slice_cfg = {}
 
     # geometria do tubo e particulas com defaults seguros se faltar chave
     altura = _coerce_float(bed_raw.get("height"), 0.1)
@@ -779,6 +829,9 @@ def main_com_parametros():
             print("  animacao completa")
             print(f"{sep}")
             print("particulas acomodadas bake aplicado pronto exportacao\n")
+
+        # aplicar thin slice no fim (ambos os ramos ja criaram os meshes)
+        aplicar_thin_slice(slice_cfg, altura=altura, raio_ext=raio_ext)
 
         # ambos os ramos chegam aqui com objetos na cena prontos para salvar
         if args.output:

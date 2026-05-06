@@ -1,0 +1,61 @@
+{
+  "packing_mode": "hexagonal_3d",
+  "generation_backend": "pure_python",
+  "bed": {
+    "r_outer": 0.025,
+    "r_inner": 0.023,
+    "height": 0.1,
+    "clearance": 0.01,
+    "material": "steel",
+    "roughness": 0.0
+  },
+  "particles": {
+    "kind": "sphere",
+    "count": 80,
+    "diameter": 0.0015,
+    "target_porosity": 0.4,
+    "density": 2500.0,
+    "mass": 0.0,
+    "restitution": 0.0,
+    "friction": 0.5,
+    "rolling_friction": 0.1,
+    "linear_damping": 0.1,
+    "angular_damping": 0.1,
+    "seed": 1
+  },
+  "lids": {
+    "top_type": "flat",
+    "bottom_type": "flat",
+    "bottom_thickness": 0.003,
+    "top_thickness": 0.003,
+    "seal_clearance": 0.001
+  },
+  "packing": {
+    "method": "hexagonal_3d",
+    "gap": 0.0001,
+    "strict_validation": true,
+    "mesh_segmentos": 24,
+    "sphere_lat": 3,
+    "sphere_lon": 5
+  },
+  "export": {
+    "formats": [
+      "blend",
+      "stl"
+    ],
+    "units": "m",
+    "scale": 1.0,
+    "wall_mode": "surface",
+    "fluid_mode": "none",
+    "manifold_check": true,
+    "merge_distance": 0.001
+  },
+  "slice": {
+    "slice_enabled": true,
+    "slice_thickness": 0.002,
+    "slice_axis": "y",
+    "slice_position": 0.0,
+    "keep_only_intersecting_particles": true,
+    "preserve_original_packing": false
+  }
+}

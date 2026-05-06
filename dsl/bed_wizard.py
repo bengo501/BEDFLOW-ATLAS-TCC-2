@@ -47,6 +47,7 @@ from wizard_json_loader import (
     load_wizard_json,
     normalize_loaded_dict,
     patch_compiled_json_export,
+    patch_compiled_json_slice,
     patch_compiled_json_metadata,
     patch_compiled_json_packing,
     resolve_repo_path,
@@ -77,51 +78,108 @@ class _WizardCancelled(Exception):
 class BedWizard:
     """classe principal do wizard para criacao de arquivos .bed"""
 
-    # menu inicial (atalho, titulo, resumo curto — duas linhas na ui rich)
-    MAIN_MENU_ROWS: List[Tuple[str, str, str]] = [
-        (
-            "1",
-            "comecar",
-            "questionario, templates, testes rapidos, geracao 3d no blender ou pipeline completo",
-        ),
-        ("2", "ajuda", "resumo dos parametros do ficheiro .bed por secao"),
-        (
-            "3",
-            "documentacao",
-            "guia do projeto neste terminal (texto extraido do html)",
-        ),
-        ("4", "sair", "encerrar o wizard"),
-    ]
+    _I18N: Dict[str, Dict[str, str]] = {
+        "pt": {
+            "app.title": "wizard de parametrizacao",
+            "app.subtitle": "leitos empacotados — arquivos .bed / antlr / blender / openfoam",
+            "menu.title.main": "opcoes",
+            "menu.title.start": "comecar",
+            "menu.main.start.title": "comecar",
+            "menu.main.start.desc": "questionario, templates, testes rapidos, geracao 3d no blender ou pipeline completo",
+            "menu.main.help.title": "ajuda",
+            "menu.main.help.desc": "resumo dos parametros do ficheiro .bed por secao",
+            "menu.main.docs.title": "documentacao",
+            "menu.main.docs.desc": "guia do projeto neste terminal (texto extraido do html)",
+            "menu.main.lang.title": "idioma",
+            "menu.main.lang.desc": "trocar portugues/ingles",
+            "menu.main.exit.title": "sair",
+            "menu.main.exit.desc": "encerrar o wizard",
+            "menu.start.smart.title": "assistente inteligente",
+            "menu.start.smart.desc": "perguntas curtas para guiar ao .bed, modelo 3d no blender ou pipeline openfoam",
+            "menu.start.q.title": "questionario interativo",
+            "menu.start.q.desc": "passo a passo; gera .bed; cfd opcional; export configuravel",
+            "menu.start.tpl.title": "templates, editor e testes rapidos",
+            "menu.start.tpl.desc": "json em dsl/wizard_templates, editor .bed classico, ou fluxo guiado com ficheiros existentes",
+            "menu.start.blender.title": "geracao 3d (blender)",
+            "menu.start.blender.desc": "sem cfd; export como no questionario; escolhe como abrir o blender no fim",
+            "menu.start.pipe.title": "pipeline completo (avancado)",
+            "menu.start.pipe.desc": "bed + blender + caso openfoam + simulacao no wsl; longo; requisitos elevados",
+            "menu.start.back.title": "voltar",
+            "menu.start.back.desc": "regressa ao menu principal",
+            "prompt.main.choice": "opcao (1-5): ",
+            "prompt.start.choice": "opcao (0-5): ",
+            "lang.header": "idioma",
+            "lang.subtitle": "trocar idioma do wizard",
+            "lang.current": "idioma atual",
+            "lang.choose": "escolha o idioma",
+            "lang.pt": "portugues",
+            "lang.en": "ingles",
+            "lang.ok": "idioma atualizado",
+        },
+        "en": {
+            "app.title": "parameter wizard",
+            "app.subtitle": "packed beds — .bed / antlr / blender / openfoam",
+            "menu.title.main": "options",
+            "menu.title.start": "start",
+            "menu.main.start.title": "start",
+            "menu.main.start.desc": "questionnaire, templates, quick tests, 3d generation in blender or full pipeline",
+            "menu.main.help.title": "help",
+            "menu.main.help.desc": "summary of .bed parameters by section",
+            "menu.main.docs.title": "documentation",
+            "menu.main.docs.desc": "project guide in this terminal (text extracted from html)",
+            "menu.main.lang.title": "language",
+            "menu.main.lang.desc": "toggle portuguese/english",
+            "menu.main.exit.title": "exit",
+            "menu.main.exit.desc": "close the wizard",
+            "menu.start.smart.title": "smart assistant",
+            "menu.start.smart.desc": "short questions to guide to .bed, 3d blender model, or openfoam pipeline",
+            "menu.start.q.title": "interactive questionnaire",
+            "menu.start.q.desc": "step-by-step; generates .bed; optional cfd; configurable export",
+            "menu.start.tpl.title": "templates, editor and quick tests",
+            "menu.start.tpl.desc": "json templates, classic .bed editor, or guided runs with existing files",
+            "menu.start.blender.title": "3d generation (blender)",
+            "menu.start.blender.desc": "no cfd; export like questionnaire; choose blender open policy at end",
+            "menu.start.pipe.title": "full pipeline (advanced)",
+            "menu.start.pipe.desc": "bed + blender + openfoam case + wsl simulation; long; heavy requirements",
+            "menu.start.back.title": "back",
+            "menu.start.back.desc": "return to main menu",
+            "prompt.main.choice": "choice (1-5): ",
+            "prompt.start.choice": "choice (0-5): ",
+            "lang.header": "language",
+            "lang.subtitle": "change wizard language",
+            "lang.current": "current language",
+            "lang.choose": "choose language",
+            "lang.pt": "portuguese",
+            "lang.en": "english",
+            "lang.ok": "language updated",
+        },
+    }
 
-    # submenu depois de escolher comecar
-    START_MENU_ROWS: List[Tuple[str, str, str]] = [
-        (
-            "1",
-            "assistente inteligente",
-            "perguntas curtas para guiar ao .bed, modelo 3d no blender ou pipeline openfoam",
-        ),
-        (
-            "2",
-            "questionario interativo",
-            "passo a passo; gera .bed; cfd opcional; export configuravel",
-        ),
-        (
-            "3",
-            "templates, editor e testes rapidos",
-            "json em dsl/wizard_templates, editor .bed classico, ou fluxo guiado com ficheiros existentes",
-        ),
-        (
-            "4",
-            "geracao 3d (blender)",
-            "sem cfd; export como no questionario; escolhe como abrir o blender no fim",
-        ),
-        (
-            "5",
-            "pipeline completo (avancado)",
-            "bed + blender + caso openfoam + simulacao no wsl; longo; requisitos elevados",
-        ),
-        ("0", "voltar", "regressa ao menu principal"),
-    ]
+    def _t(self, key: str, default_pt: str = "") -> str:
+        d = self._I18N.get(getattr(self, "lang", "pt"), {})
+        if key in d:
+            return d[key]
+        # fallback pt se existir, senao default_pt
+        return self._I18N.get("pt", {}).get(key, default_pt)
+
+    def _main_menu_rows(self) -> List[Tuple[str, str, str]]:
+        return [
+            ("1", self._t("menu.main.start.title", "comecar"), self._t("menu.main.start.desc", "")),
+            ("2", self._t("menu.main.help.title", "ajuda"), self._t("menu.main.help.desc", "")),
+            ("3", self._t("menu.main.docs.title", "documentacao"), self._t("menu.main.docs.desc", "")),
+            ("4", self._t("menu.main.exit.title", "sair"), self._t("menu.main.exit.desc", "")),
+            ("5", self._t("menu.main.lang.title", "idioma"), self._t("menu.main.lang.desc", "")),
+        ]
+
+    def _start_menu_rows(self) -> List[Tuple[str, str, str]]:
+        return [
+            ("1", self._t("menu.start.smart.title", ""), self._t("menu.start.smart.desc", "")),
+            ("2", self._t("menu.start.q.title", ""), self._t("menu.start.q.desc", "")),
+            ("3", self._t("menu.start.tpl.title", ""), self._t("menu.start.tpl.desc", "")),
+            ("4", self._t("menu.start.blender.title", ""), self._t("menu.start.blender.desc", "")),
+            ("5", self._t("menu.start.pipe.title", ""), self._t("menu.start.pipe.desc", "")),
+            ("0", self._t("menu.start.back.title", "voltar"), self._t("menu.start.back.desc", "")),
+        ]
 
     # valores iniciais do questionario (para marcar [alt] na lista de revisao)
     _QUESTIONNAIRE_DEFAULTS_FLAT: Dict[str, str] = {
@@ -182,6 +240,7 @@ class BedWizard:
         self.output_file = None  # nome do arquivo de saida
         self.ui = make_terminal_ui()
         self._cancel_enabled = False
+        self.lang = "pt"
         
         # dicionario com informacoes de ajuda para cada parametro
         self.param_help = {
@@ -1275,6 +1334,27 @@ class BedWizard:
         e["merge_distance"] = self.get_number_input(
             "distancia de fusao", "0.001", "m", False, "export.merge_distance"
         )
+
+    def _questionnaire_slice_section(self) -> None:
+        # thin slice (pseudo 2d) opcional
+        self.print_section("thin slice (pseudo 2d)")
+        if not self.get_boolean("ativar thin slice (fatia fina 3d)?", False):
+            if "slice" in self.params:
+                self.params.pop("slice", None)
+            return
+        axis = self.get_choice("eixo normal do corte", ["x", "y", "z"], 1)
+        thickness = self.get_number_input("espessura da fatia", "0.002", "m", False, "")
+        pos = self.get_number_input("posicao central da fatia", "0.0", "m", False, "")
+        keep_only = self.get_boolean("manter apenas particulas que intersectam a fatia?", True)
+        preserve = self.get_boolean("preservar coordenadas originais (nao recentrar na fatia)?", True)
+        self.params["slice"] = {
+            "slice_enabled": True,
+            "slice_thickness": float(thickness),
+            "slice_axis": axis,
+            "slice_position": float(pos),
+            "keep_only_intersecting_particles": bool(keep_only),
+            "preserve_original_packing": bool(preserve),
+        }
     
     def _fill_params_from_questionnaire(self) -> None:
         """preenche self.params com todas as secoes do questionario (sem nome de arquivo nem salvar)."""
@@ -1446,6 +1526,7 @@ class BedWizard:
 
         self.params["packing"] = self._collect_packing_params(with_param_help=True)
         self._questionnaire_export_section()
+        self._questionnaire_slice_section()
 
         self.print_section("parametros cfd (opcional)")
         if self.get_boolean("incluir parametros cfd?", False):
@@ -1565,6 +1646,7 @@ class BedWizard:
                     # recoloca formatos de export pedidos pelo usuario stl obj etc
                     patch_compiled_json_export(jpath, self.params)
                     patch_compiled_json_metadata(jpath, self.params)
+                    patch_compiled_json_slice(jpath, self.params)
                     # aqui usamos o metadado generation_backend
                     # se ele for pure_python entao o pipeline pode gerar o stl em python puro
                     # isso evita depender de um passo extra dentro do blender
@@ -2015,6 +2097,7 @@ cfd {
         self._maybe_load_existing_bed(caption="geracao 3d (blender)")
         self._questionnaire_blender_bed_lids_particles_packing()
         self._questionnaire_export_section()
+        self._questionnaire_slice_section()
         self.ui.hint("secao cfd omitida neste modo")
         self.output_file = self.get_input("nome do arquivo de saida", "leito_blender.bed")
         opt_nunca = "nao abrir o blender apos gerar"
@@ -2064,6 +2147,7 @@ cfd {
         patch_compiled_json_packing(jpath, self.params)
         patch_compiled_json_export(jpath, self.params)
         patch_compiled_json_metadata(jpath, self.params)
+        patch_compiled_json_slice(jpath, self.params)
         self.ui.section("executando blender")
         open_after = open_policy == "always"
         ok, blend_path = self.execute_blender(open_after=open_after)
@@ -2409,6 +2493,7 @@ cfd {
         patch_compiled_json_packing(json_path, self.params)
         patch_compiled_json_export(json_path, self.params)
         patch_compiled_json_metadata(json_path, self.params)
+        patch_compiled_json_slice(json_path, self.params)
         self.ui.ok(f"arquivo compilado: {json_path}")
 
         # gerar modelo 3d no blender
@@ -2722,10 +2807,10 @@ cfd {
         """submenu comecar (fluxos operacionais)."""
         self.ui.clear()
         self.ui.header(
-            "wizard de parametrizacao",
-            "leitos empacotados — arquivos .bed / antlr / blender / openfoam",
+            self._t("app.title", "wizard de parametrizacao"),
+            self._t("app.subtitle", "leitos empacotados — arquivos .bed / antlr / blender / openfoam"),
         )
-        self.ui.breadcrumbs("wizard", "comecar")
+        self.ui.breadcrumbs("wizard", self._t("menu.title.start", "comecar"))
         if not rich_available():
             self.ui.hint("instale rich para cores e tabelas: pip install rich")
             self.ui.println()
@@ -2735,13 +2820,13 @@ cfd {
                 "(setas, historico, tab)."
             )
             self.ui.println()
-        self.ui.render_main_menu(self.START_MENU_ROWS, title="comecar")
+        self.ui.render_main_menu(self._start_menu_rows(), title=self._t("menu.title.start", "comecar"))
 
     def run_start_menu(self) -> None:
         """loop do submenu comecar ate o utilizador escolher 0 voltar."""
         while True:
             self._draw_start_menu()
-            choice = self.ui.ask_line("opcao (0-5): ").strip()
+            choice = self.ui.ask_line(self._t("prompt.start.choice", "opcao (0-5): ")).strip()
             if choice == "0":
                 return
             if choice == "1":
@@ -2851,7 +2936,10 @@ cfd {
     def _draw_main_menu(self) -> None:
         """tela inicial estilo navegador (barra + tabela de modos)."""
         self.ui.clear()
-        self.ui.header("wizard de parametrizacao", "leitos empacotados — arquivos .bed / antlr / blender / openfoam")
+        self.ui.header(
+            self._t("app.title", "wizard de parametrizacao"),
+            self._t("app.subtitle", "leitos empacotados — arquivos .bed / antlr / blender / openfoam"),
+        )
         if not rich_available():
             self.ui.hint("instale rich para cores e tabelas: pip install rich")
             self.ui.println()
@@ -2861,13 +2949,29 @@ cfd {
                 "(setas, historico, tab)."
             )
             self.ui.println()
-        self.ui.render_main_menu(self.MAIN_MENU_ROWS)
+        self.ui.render_main_menu(self._main_menu_rows(), title=self._t("menu.title.main", "opcoes"))
+
+    def language_mode(self) -> None:
+        self.clear_screen()
+        self.print_header(self._t("lang.header", "idioma"), self._t("lang.subtitle", "trocar idioma do wizard"))
+        self.ui.breadcrumbs("wizard", self._t("lang.header", "idioma"))
+        self.ui.println()
+        cur = self._t("lang.pt", "portugues") if self.lang == "pt" else self._t("lang.en", "ingles")
+        self.ui.muted(f"{self._t('lang.current', 'idioma atual')}: {cur}")
+        self.ui.println()
+        pick = self.get_choice(
+            self._t("lang.choose", "escolha o idioma"),
+            [self._t("lang.pt", "portugues"), self._t("lang.en", "ingles")],
+            0 if self.lang == "pt" else 1,
+        )
+        self.lang = "pt" if pick == self._t("lang.pt", "portugues") else "en"
+        self.ui.ok(self._t("lang.ok", "idioma atualizado"))
     
     def run(self):
         """executar wizard"""
         while True:
             self._draw_main_menu()
-            choice = self.ui.ask_line("opcao (1-4): ").strip()
+            choice = self.ui.ask_line(self._t("prompt.main.choice", "opcao (1-5): ")).strip()
             
             if choice == "1":
                 self.run_start_menu()
@@ -2879,8 +2983,11 @@ cfd {
             elif choice == "4":
                 self.ui.muted("ate logo!")
                 sys.exit(0)
+            elif choice == "5":
+                self.language_mode()
+                self.ui.pause("enter para voltar ao menu principal...")
             else:
-                self.ui.warn("escolha um numero de 1 a 4")
+                self.ui.warn("escolha um numero de 1 a 5")
                 self.ui.pause("enter para voltar ao menu...")
 
 def main():
