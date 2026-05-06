@@ -1,4 +1,4 @@
-# Generated from grammar/Bed.g4 by ANTLR 4.13.1
+# Generated from C:/Users/joxto/Downloads/BEDFLOW-ATLAS-TCC-2/dsl/grammar/Bed.g4 by ANTLR 4.13.1
 # encoding: utf-8
 from antlr4 import *
 from io import StringIO

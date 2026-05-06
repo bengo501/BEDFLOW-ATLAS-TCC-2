@@ -218,35 +218,55 @@ def scan_project_mesh_files(*, max_files: int = 2000) -> List[Dict[str, Any]]:
     ordenado por mtime decrescente; limita quantidade para evitar travar em arvores enormes.
     """
     root = project_root()
+    root_res = root.resolve()
     items: List[Dict[str, Any]] = []
     exts = {e.lower() for e in VIEWER_MESH_EXTENSIONS} | {e.lower() for e in VIEWER_SCENE_EXTENSIONS}
+
+    def _append_if_mesh(fp: Path) -> None:
+        if not fp.is_file():
+            return
+        if fp.suffix.lower() not in exts:
+            return
+        try:
+            rel = str(fp.resolve().relative_to(root_res)).replace("\\", "/")
+        except ValueError:
+            return
+        if not is_viewer_mesh_relative_path(rel):
+            return
+        st = fp.stat()
+        items.append(
+            {
+                "relative_path": rel,
+                "filename": fp.name,
+                "mesh_id": mesh_id_for_relative_path(rel),
+                "size_bytes": st.st_size,
+                "mtime": st.st_mtime,
+                "format": fp.suffix.lower().lstrip("."),
+            }
+        )
+
     for base in iter_mesh_scan_roots():
         try:
             for fp in base.rglob("*"):
-                if not fp.is_file():
-                    continue
-                if fp.suffix.lower() not in exts:
-                    continue
-                try:
-                    rel = str(fp.resolve().relative_to(root.resolve())).replace("\\", "/")
-                except ValueError:
-                    continue
-                if not is_viewer_mesh_relative_path(rel):
-                    continue
-                st = fp.stat()
-                items.append(
-                    {
-                        "relative_path": rel,
-                        "filename": fp.name,
-                        "mesh_id": mesh_id_for_relative_path(rel),
-                        "size_bytes": st.st_size,
-                        "mtime": st.st_mtime,
-                        "format": fp.suffix.lower().lstrip("."),
-                    }
-                )
+                _append_if_mesh(fp)
         except OSError:
             continue
-    items.sort(key=lambda x: x["mtime"], reverse=True)
+    # raiz do repo: apenas ficheiros directos (evita varrer node_modules, .git, etc.)
+    try:
+        for ext in sorted(exts):
+            for fp in root.glob(f"*{ext}"):
+                _append_if_mesh(fp)
+    except OSError:
+        pass
+    models_prefix = "local_data/models_3d/"
+
+    def _scan_sort_key(item: Dict[str, Any]) -> Tuple[int, float]:
+        rel = str(item.get("relative_path") or "").replace("\\", "/")
+        # saida do blender / wizard: esta pasta primeiro, depois por data
+        pri = 0 if rel.startswith(models_prefix) else 1
+        return (pri, -float(item["mtime"]))
+
+    items.sort(key=_scan_sort_key)
     return items[:max_files]
 
 
@@ -254,7 +274,15 @@ def is_viewer_mesh_relative_path(rel: str) -> bool:
     r = (rel or "").replace("\\", "/").lstrip("/")
     if ".." in r or r.startswith("/"):
         return False
-    return any(r.startswith(pref) for pref in VIEWER_MESH_PATH_PREFIXES)
+    if any(r.startswith(pref) for pref in VIEWER_MESH_PATH_PREFIXES):
+        return True
+    # malha ou cena blender directamente na raiz do repo (ex.: leito_hex_pure.stl)
+    mesh_exts = tuple(
+        e.lower() for e in VIEWER_MESH_EXTENSIONS + VIEWER_SCENE_EXTENSIONS
+    )
+    if "/" not in r and r.lower().endswith(mesh_exts):
+        return True
+    return False
 
 
 def resolve_validated_mesh_path(rel: str) -> Optional[Path]:

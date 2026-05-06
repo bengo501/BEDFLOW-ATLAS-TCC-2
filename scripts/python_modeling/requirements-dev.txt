@@ -1,2 +1,5 @@
 # dependencias apenas para testes locais do python modeling
 pytest>=7.4,<9
+
+# opcional: visualizador desktop mesh_viewer_desktop.py (open3d e restantes)
+# na raiz do repo: pip install -r requirements-visualizacao.txt

@@ -255,39 +255,120 @@ def executar_simulacao_fisica(tempo_simulacao=5.0, fps=24):
 # ==================
 # Bake da fisica =
 # =========================================================================================
+def _temp_override_view3d():
+    """
+    em --background muitas vezes nao ha area VIEW_3D; bake_to_keyframes e keyframe_insert
+    exigem contexto 3d valido. devolve (dict_para_temp_override ou None, area_promovida_ou_None, tipo_anterior).
+    """
+    wm = bpy.context.window_manager
+    if not wm.windows:
+        return None, None, None
+    win = wm.windows[0]
+    for area in win.screen.areas:
+        if area.type == "VIEW_3D":
+            for region in area.regions:
+                if region.type == "WINDOW":
+                    ctx = dict(
+                        window=win,
+                        screen=win.screen,
+                        area=area,
+                        region=region,
+                        scene=bpy.context.scene,
+                        view_layer=bpy.context.view_layer,
+                    )
+                    return ctx, None, None
+    area = win.screen.areas[0]
+    prev = area.type
+    area.type = "VIEW_3D"
+    region = None
+    for r in area.regions:
+        if r.type == "WINDOW":
+            region = r
+            break
+    if region is None:
+        area.type = prev
+        return None, None, None
+    ctx = dict(
+        window=win,
+        screen=win.screen,
+        area=area,
+        region=region,
+        scene=bpy.context.scene,
+        view_layer=bpy.context.view_layer,
+    )
+    return ctx, area, prev
+
+
+def _congelar_particulas_depsgraph(particulas):
+    """
+    fallback headless: copia matrix_world avaliada no frame atual e remove rigid body
+    sem depender de bake_to_keyframes.
+    """
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    bpy.context.view_layer.update()
+    for obj in particulas:
+        ev = obj.evaluated_get(depsgraph)
+        obj.matrix_world = ev.matrix_world.copy()
+    ovr, promoted_area, promoted_prev = _temp_override_view3d()
+    if ovr is None:
+        print("aviso: sem override 3d; posicoes copiadas mas rigid body pode permanecer")
+        return
+    try:
+        with bpy.context.temp_override(**ovr):
+            for obj in particulas:
+                if not obj.rigid_body:
+                    continue
+                bpy.ops.object.select_all(action="DESELECT")
+                obj.select_set(True)
+                bpy.context.view_layer.objects.active = obj
+                bpy.ops.rigidbody.object_remove()
+        print("congelamento alternativo: matriz avaliada aplicada e rigid body removido")
+    except Exception as e:
+        print(f"aviso: congelamento alternativo incompleto: {e}")
+    finally:
+        if promoted_area is not None and promoted_prev is not None:
+            promoted_area.type = promoted_prev
+
+
 def fazer_bake_fisica(particulas):
     """
     faz bake (congelamento) da fisica nas particulas
     isso converte a simulacao em keyframes fixos
     """
     print("\nfazendo bake da fisica...")
-    
-    # selecionar todas as particulas
-    bpy.ops.object.select_all(action='DESELECT')
-    for particula in particulas:
-        particula.select_set(True)
-    
-    # fazer bake
+
+    ovr, promoted_area, promoted_prev = _temp_override_view3d()
     try:
-        # bake to keyframes (converte fisica em animacao)
-        bpy.ops.rigidbody.bake_to_keyframes(
-            frame_start=bpy.context.scene.frame_start,
-            frame_end=bpy.context.scene.frame_end,
-            step=1
-        )
-        print("bake concluido - fisica convertida em keyframes")
-        
-        # remover rigid body das particulas (agora sao keyframes)
-        for particula in particulas:
-            if particula.rigid_body:
-                bpy.context.view_layer.objects.active = particula
-                bpy.ops.rigidbody.object_remove()
-        
-        print("rigid body removido - particulas estao fixas nas posicoes finais")
-        
+        if ovr is not None:
+            with bpy.context.temp_override(**ovr):
+                bpy.ops.object.select_all(action="DESELECT")
+                for particula in particulas:
+                    particula.select_set(True)
+                if particulas:
+                    bpy.context.view_layer.objects.active = particulas[0]
+                bpy.ops.rigidbody.bake_to_keyframes(
+                    frame_start=bpy.context.scene.frame_start,
+                    frame_end=bpy.context.scene.frame_end,
+                    step=1,
+                )
+            print("bake concluido - fisica convertida em keyframes")
+            with bpy.context.temp_override(**ovr):
+                for particula in particulas:
+                    if particula.rigid_body:
+                        bpy.ops.object.select_all(action="DESELECT")
+                        particula.select_set(True)
+                        bpy.context.view_layer.objects.active = particula
+                        bpy.ops.rigidbody.object_remove()
+            print("rigid body removido - particulas estao fixas nas posicoes finais")
+        else:
+            raise RuntimeError("sem contexto VIEW_3D para bake")
     except Exception as e:
         print(f"aviso: erro no bake: {e}")
-        print("particulas manterao fisica ativa")
+        print("tentando congelar posicoes via depsgraph (modo background)...")
+        _congelar_particulas_depsgraph(particulas)
+    finally:
+        if promoted_area is not None and promoted_prev is not None:
+            promoted_area.type = promoted_prev
 # =========================================================================================
 
 # ======
@@ -459,7 +540,9 @@ def export_outputs(args, output_path: Path):
     formats = [f.strip().lower() for f in args.formats.split(",")]
     print(f"formatos selecionados: {', '.join(formats)}")
     # cada bloco abaixo tenta exportar e imprime erro sem derrubar o script inteiro
-    if "blend" in formats:
+    # se o destino for .blend, gravar sempre o ficheiro principal (json pode pedir so stl/obj)
+    save_blend = "blend" in formats or output_path.suffix.lower() == ".blend"
+    if save_blend:
         try:
             bpy.ops.wm.save_as_mainfile(filepath=str(output_path))
             print(f"arquivo .blend salvo: {output_path}")
@@ -525,12 +608,23 @@ def export_outputs(args, output_path: Path):
     if "stl" in formats:
         try:
             stl_path = output_path.with_suffix(".stl")
-            bpy.ops.wm.stl_export(
-                filepath=str(stl_path),
-                export_selected_objects=False,
-                apply_modifiers=True,
-                ascii_format=False,
-            )
+            # blender 4.0.x: wm.stl_export pode nao existir; export_mesh.stl e o operador estavel
+            try:
+                bpy.ops.wm.stl_export(
+                    filepath=str(stl_path),
+                    export_selected_objects=False,
+                    apply_modifiers=True,
+                    ascii_format=False,
+                )
+            except Exception:
+                bpy.ops.export_mesh.stl(
+                    filepath=str(stl_path),
+                    check_existing=False,
+                    use_selection=False,
+                    use_mesh_modifiers=True,
+                    ascii=False,
+                    global_scale=1.0,
+                )
             print(f"arquivo .stl exportado: {stl_path}")
         except Exception as e:
             print(f"erro ao exportar .stl: {e}")

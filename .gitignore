@@ -110,6 +110,9 @@ local_data/
 *.sqlite
 *.sqlite3
 
+# jar do antlr (baixado localmente para regenerar lexer)
+dsl/grammar/antlr-*-complete.jar
+
 # arquivos antlr gerados
 dsl/compiler/antlr_output/
 dsl/compiler/*.interp

@@ -36,14 +36,7 @@
     "damping": 0.1,
     "rest_velocity": 0.01,
     "max_time": 5.0,
-    "collision_margin": 0.001,
-    "gap": 0.0001,
-    "random_seed": 7,
-    "max_placement_attempts": 200000,
-    "strict_validation": true,
-    "mesh_segmentos": 24,
-    "sphere_lat": 3,
-    "sphere_lon": 5
+    "collision_margin": 0.001
   },
   "export": {
     "formats": [
@@ -69,6 +62,6 @@
   "_metadata": {
     "hash": "144a47a3",
     "compiler": "bed_compiler_antlr_standalone",
-    "input_file": "F:\\Game Projects\\Godot 4\\CFD-PIPELINE-TCC-2\\_test_spherical.bed"
+    "input_file": "C:\\Users\\joxto\\Downloads\\BEDFLOW-ATLAS-TCC-2\\_test_spherical.bed"
   }
 }

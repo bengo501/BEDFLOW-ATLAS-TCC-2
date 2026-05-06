@@ -633,8 +633,8 @@ def run(wizard: "BedWizard") -> None:
         else:
             ui.warn(f"nenhum test*.json em {_FIX_DIR}")
         ui.muted("caminho manual ou etiqueta@caminho exemplo: _test_hex.json@scripts/python_modeling/_test_hex.json")
-        raw = ui.ask_line("numero ou caminho .json (vazio cancelar): ").strip()
-        if not raw:
+        raw = ui.ask_line("numero ou caminho .json (vazio ou c cancelar): ").strip()
+        if not raw or raw.lower() in ("c", "cancel", "cancelar", "voltar", "back"):
             ui.pause()
             return
         chosen = _resolve_json_input(raw, files)
@@ -663,8 +663,8 @@ def run(wizard: "BedWizard") -> None:
                 ui.println("ficheiros .bed:")
                 for i, p in enumerate(beds, 1):
                     ui.muted(f"  {i}. {p}")
-        raw = ui.ask_line("numero ou caminho .bed (vazio cancelar): ").strip()
-        if not raw:
+        raw = ui.ask_line("numero ou caminho .bed (vazio ou c cancelar): ").strip()
+        if not raw or raw.lower() in ("c", "cancel", "cancelar", "voltar", "back"):
             ui.pause()
             return
         chosen_b = _resolve_bed_input(raw, beds)

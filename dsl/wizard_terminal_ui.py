@@ -276,7 +276,7 @@ class PlainWizardUi:
             if help_callback or review_callback:
                 print("  (? ajuda  * rever parametros)")
             if cancel_callback:
-                print("  (c cancelar e voltar ao menu inicial)")
+                print("  (c = voltar / cancelar — sobe no fluxo ou sai ao menu onde o cancelamento e tratado)")
             try:
                 raw = self.ask_line(
                     f"\nescolha (1-{len(options)}): ",
@@ -504,7 +504,12 @@ class RichWizardUi:
         if help_callback or review_callback:
             self.console.print(Text("? ajuda   * rever parametros", style="wizard.hint"))
         if cancel_callback:
-            self.console.print(Text("c cancelar e voltar ao menu inicial", style="wizard.hint"))
+            self.console.print(
+                Text(
+                    "c = voltar / cancelar (sobe no fluxo ou sai ao menu onde o cancelamento e tratado)",
+                    style="wizard.hint",
+                )
+            )
         self.console.print()
         while True:
             raw = self.ask_line(

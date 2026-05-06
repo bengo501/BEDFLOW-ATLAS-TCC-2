@@ -12,10 +12,14 @@ if TYPE_CHECKING:
     from bed_wizard import BedWizard
 
 _REPO = Path(__file__).resolve().parent.parent
-if str(_REPO) not in sys.path:
-    sys.path.insert(0, str(_REPO))
+_DSL_DIR = Path(__file__).resolve().parent
+# dsl/ antes da raiz: em sys.path[0] existe bed_wizard.py atalho sem _WizardCancelled
+for _p in (_REPO, _DSL_DIR):
+    if str(_p) not in sys.path:
+        sys.path.insert(0, str(_p))
 
 from bedflow_local_paths import resolve_validated_mesh_path, scan_project_mesh_files  # noqa: E402
+from bed_wizard import _WizardCancelled  # noqa: E402
 
 
 def _env_frontend_url() -> str:
@@ -70,16 +74,27 @@ def run_visualization_mode(wizard: BedWizard) -> None:
         )
         ui.breadcrumbs("wizard", wizard._t("view3d.crumb", "visualizacao 3d"))
         ui.println()
+        ui.muted(wizard._t("view3d.scan_hint", ""))
+        ui.println()
 
         q = ui.ask_line(
-            wizard._t("view3d.search", "pesquisar (vazio=lista recentes, c=voltar): ")
+            wizard._t(
+                "view3d.search",
+                "pesquisar (vazio=tudo, l=lista, c=menu principal): ",
+            )
         ).strip()
         if q.lower() == "c":
             return
         filtered: List[Dict[str, Any]] = list(rows)
-        if q:
-            ql = q.lower()
-            filtered = [r for r in rows if ql in r["relative_path"].lower() or ql in r["filename"].lower()]
+        qnorm = q.lower()
+        # "lista" e sinonimos nao sao filtro — o utilizador espera ver todos os ficheiros
+        if q and qnorm not in ("lista", "list", "l", "todos", "all", "*"):
+            ql = qnorm
+            filtered = [
+                r
+                for r in rows
+                if ql in r["relative_path"].lower() or ql in r["filename"].lower()
+            ]
 
         filtered = filtered[:80]
         _console = getattr(ui, "console", None)
@@ -109,8 +124,10 @@ def run_visualization_mode(wizard: BedWizard) -> None:
 
         ui.println()
         pick = ui.ask_line(
-            wizard._t("view3d.pick", "numero do modelo (0=cancelar): ")
+            wizard._t("view3d.pick", "numero do modelo (0=rever lista, c=menu principal): ")
         ).strip()
+        if pick.lower() == "c":
+            return
         if pick == "0" or not pick:
             continue
         if not pick.isdigit() or int(pick) < 1 or int(pick) > len(filtered):
@@ -145,11 +162,14 @@ def run_visualization_mode(wizard: BedWizard) -> None:
         lab_desk = wizard._t("view3d.opt.desktop", "visualizador desktop (open3d, stl/obj/ply)")
         lab_blend = wizard._t("view3d.opt.blender", "abrir no blender")
         lab_back = wizard._t("view3d.opt.back", "voltar a lista")
-        dest = wizard.get_choice(
-            wizard._t("view3d.choose_dest", "onde visualizar"),
-            [lab_web, lab_desk, lab_blend, lab_back],
-            0,
-        )
+        try:
+            dest = wizard.get_choice(
+                wizard._t("view3d.choose_dest", "onde visualizar"),
+                [lab_web, lab_desk, lab_blend, lab_back],
+                0,
+            )
+        except _WizardCancelled:
+            continue
         if dest == lab_back:
             continue
 
@@ -191,7 +211,11 @@ def run_visualization_mode(wizard: BedWizard) -> None:
             ui.muted(f"executando: python {script.name} {abs_path}")
             rc = subprocess.call([sys.executable, str(script), str(abs_path)])
             if rc == 2:
-                ui.warn("open3d nao instalado: pip install open3d")
+                ui.warn(
+                    "open3d nao disponivel: na raiz do repo execute "
+                    "pip install -r requirements-visualizacao.txt "
+                    "(no windows pode precisar de caminhos longos ou venv curto — ver comentarios nesse ficheiro)"
+                )
             elif rc != 0:
                 ui.warn(f"visualizador terminou com codigo {rc}")
             ui.pause("enter...")

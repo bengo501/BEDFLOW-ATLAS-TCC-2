@@ -88,7 +88,8 @@ cfdProperty: 'regime' '=' cfdRegime ';'                # cfdRegimeProp // regime
 cfdRegime: 'laminar' | 'turbulent_rans' | STRING; // regime laminar ou turbulento
 
 // tokens lexicos: numeros, unidades, strings e booleanos
-NUMBER: '-'? [0-9]+ ('.' [0-9]+)?; // numeros com ou sem ponto decimal (incluindo negativos)
+// notacao cientifica opcional ex 1.8e-5 1e-6
+NUMBER: '-'? [0-9]+ ('.' [0-9]+)? ([eE] [+-]? [0-9]+)?;
 INTEGER: '-'? [0-9]+; // numeros inteiros (incluindo negativos)
 UNIT: 'm' | 'cm' | 'mm' | 'kg' | 'g' | 's' | 'Pa' | 'N' | 'm/s' | 'kg/m3' | 'Pa.s' | 'm/s2' | 'm/s²'; // unidades de medida
 STRING: '"' (~["\r\n])* '"'; // strings entre aspas
@@ -97,4 +98,5 @@ BOOLEAN: 'true' | 'false'; // booleanos
 // ignorar espacos e comentarios
 WS: [ \t\r\n]+ -> skip;
 COMMENT: '//' ~[\r\n]* -> skip;
-BLOCK_COMMENT: '/*' .*? '*/' -> skip;
+// comentario bloco multilinha (c-style)
+BLOCK_COMMENT: '/*' ( ~'*' | '*' ~'/' )* '*/' -> skip;

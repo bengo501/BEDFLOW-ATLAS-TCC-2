@@ -30,12 +30,11 @@ def validate_position(
         # se os limites estao invertidos o proprio dominio e impossivel
         if rho_min > rho_max or z_min > z_max:
             return False, "dominio_vazio_parametros"
-        # abaixo distancia minima ao eixo significa esfera muito perto do buraco interno
         if rho < rho_min:
-            return False, "muito_perto_parede_interna"
-        # acima da distancia maxima ao eixo significa esfera muito perto da parede externa
+            return False, "abaixo_rho_min"
+        # centro longe demais do eixo: esfera invadiria a parede em r_int
         if rho > rho_max:
-            return False, "muito_perto_parede_externa"
+            return False, "muito_perto_da_parede_do_leito"
         # z baixo demais bate na tampa inferior por dentro
         if z < z_min:
             return False, "abaixo_tampa_inferior"

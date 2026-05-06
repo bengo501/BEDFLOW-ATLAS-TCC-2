@@ -1,10 +1,8 @@
 # matematica do espaco onde os centros das esferas podem existir
-# imagine um tubo oco visto de cima e um eixo z vertical
-# r int e o raio da parede interna da cavidade onde as esferas ficam
-# r ext e o raio da parede externa dessa mesma cavidade
+# tubo de parede fina: a cavidade e o cilindro interior ate a face interna da parede
+# r int e o raio interno da cavidade (superficie interna do metal) em metros
+# r ext e o raio externo do leito (referencia geometrica; empacotamento usa so a cavidade)
 # gap e folga extra entre superficies de duas esferas vizinhas
-# se gap for zero as esferas so encostam sem penetrar
-# se gap for positivo existe espaco minimo obrigatorio entre elas
 
 from __future__ import annotations
 
@@ -42,8 +40,8 @@ def sphere_center_clearance(radius_a: float, radius_b: float, gap: float) -> flo
 @dataclass
 class AnnulusBedDomain:
     # agrupa numeros que descrevem o leito e as tampas para testar posicoes
-    # r int raio interno da cavidade cilindrica em metros
-    # r ext raio externo da cavidade em metros
+    # r int raio da cavidade (parede interna do tubo) em metros
+    # r ext raio externo do corpo do leito em metros
     # height altura total do trecho do cilindro no eixo z em metros
     # bottom cap thickness espessura da tampa de baixo em metros
     # top cap thickness espessura da tampa de cima em metros
@@ -59,15 +57,10 @@ class AnnulusBedDomain:
     gap: float
 
     def radial_bounds(self) -> Tuple[float, float]:
-        # devolve rho min e rho max para o centro de uma esfera
-        # rho e distancia do eixo z ate o centro medida no plano xy
-        # rho vale raiz de x ao quadrado mais y ao quadrado
-        # o centro nao pode ficar tao perto do eixo que a esfera corte a parede interna
-        # por isso rho min e r int mais raio da esfera mais gap
-        # o centro nao pode ficar tao longe do eixo que a esfera corte a parede externa
-        # por isso rho max e r ext menos raio da esfera menos gap
-        rho_min = self.r_int + self.r_sphere + self.gap
-        rho_max = self.r_ext - self.r_sphere - self.gap
+        # distancia do eixo z ao centro no plano xy: 0 <= rho <= rho_max
+        # a esfera nao pode ultrapassar a superficie interna em r_int
+        rho_min = 0.0
+        rho_max = self.r_int - self.r_sphere - self.gap
         return rho_min, rho_max
 
     def z_bounds(self) -> Tuple[float, float]:
@@ -96,14 +89,12 @@ class AnnulusBedDomain:
         return (-rho_max, rho_max, -rho_max, rho_max, z_min, z_max)
 
     def annulus_volume_void(self) -> float:
-        # volume da cavidade entre as duas paredes cilindricas
-        # pi vezes r ext ao quadrado menos r int ao quadrado vezes altura util
-        # altura util vai da face interna inferior ate face interna superior
-        # usado depois para estimar porosidade aproximada
+        # volume do cilindro interior util entre as faces internas das tampas
+        # (volume da cavidade onde fluido e particulas se encontram)
         z_in_bottom = self.bottom_cap_thickness / 2.0
         z_in_top = self.height - self.top_cap_thickness / 2.0
         h = max(0.0, z_in_top - z_in_bottom)
-        return math.pi * (self.r_ext**2 - self.r_int**2) * h
+        return math.pi * (self.r_int**2) * h
 
 
 def point_in_domain(p: Tuple[float, float, float], domain: AnnulusBedDomain) -> bool:
@@ -139,7 +130,7 @@ def estimate_porosity(
 
 
 # notas de metodologia em texto simples
-# problema colocar n esferas no anel sem atravessar parede nem vizinho
+# problema colocar n esferas na cavidade cilindrica sem atravessar parede nem vizinho
 # condicao de nao colisao distancia entre centros maior ou igual soma dos raios mais gap
 # modo spherical sorteia pontos ate encher ou esgotar tentativas
 # modo hexagonal usa grade regular depois corta o que cai fora do cilindro

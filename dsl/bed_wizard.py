@@ -123,9 +123,10 @@ class BedWizard:
             "view3d.title": "visualizacao 3d",
             "view3d.subtitle": "malhas geradas pelo projeto (python, blender, pipeline)",
             "view3d.crumb": "visualizacao 3d",
-            "view3d.search": "pesquisar (vazio=lista, c=voltar ao menu principal): ",
+            "view3d.search": "pesquisar (vazio=tudo, l=lista, c=menu principal): ",
+            "view3d.scan_hint": "origem da lista: scan em local_data/models_3d (prioridade), depois aux, simulations, generated/* e ficheiros *.stl/*.obj/*.blend na raiz do repo (ver bedflow_local_paths.scan_project_mesh_files).",
             "view3d.table_title": "modelos",
-            "view3d.pick": "numero do modelo (0=recomeçar lista): ",
+            "view3d.pick": "numero do modelo (0=rever lista, c=menu principal): ",
             "view3d.preview": "resumo",
             "view3d.choose_dest": "onde visualizar",
             "view3d.opt.web": "navegador (three.js no frontend)",
@@ -174,9 +175,10 @@ class BedWizard:
             "view3d.title": "3d visualization",
             "view3d.subtitle": "meshes from python, blender or full pipeline",
             "view3d.crumb": "3d view",
-            "view3d.search": "search (empty=list, c=back to main menu): ",
+            "view3d.search": "search (empty=all, l=list, c=main menu): ",
+            "view3d.scan_hint": "list source: scan local_data/models_3d first, then aux, simulations, generated/* and mesh files at repo root (see bedflow_local_paths.scan_project_mesh_files).",
             "view3d.table_title": "models",
-            "view3d.pick": "model number (0=refresh list): ",
+            "view3d.pick": "model number (0=refresh list, c=main menu): ",
             "view3d.preview": "summary",
             "view3d.choose_dest": "open in",
             "view3d.opt.web": "browser (three.js)",
@@ -271,7 +273,9 @@ class BedWizard:
         self.params = {}  # dicionario para armazenar parametros do leito
         self.output_file = None  # nome do arquivo de saida
         self.ui = make_terminal_ui()
-        self._cancel_enabled = False
+        self._cancel_enabled = True
+        # true apos carregar .bed e o utilizador pedir saltar o questionario
+        self.skip_questionnaire_after_load = False
         self.lang = "pt"
         
         # dicionario com informacoes de ajuda para cada parametro
@@ -541,8 +545,11 @@ class BedWizard:
                 " linha de comando com prompt_toolkit: setas, ctrl+r no historico, tab completa "
                 "? * n p q s sim nao."
             )
-        if self._cancel_enabled:
-            extra = extra + " c cancelar e voltar ao menu inicial."
+        extra = (
+            extra
+            + " c = cancelar / voltar (nos menus com lista numerada tambem; "
+            "interrompe o fluxo e sobe ate ao menu onde o cancelamento esta tratado)."
+        )
         self.ui.hint(
             "controles: enter aceita o padrao entre [colchetes]; ? ajuda contextual; "
             "* abre a lista de parametros ja definidos para rever ou editar (depois continua aqui)."
@@ -583,6 +590,33 @@ class BedWizard:
         got = flat.get(key)
         return got if got not in (None, "") else fallback
 
+    def _default_bool_from_loaded(self, key: str, fallback: bool) -> bool:
+        flat = self._flatten_params_for_defaults()
+        v = flat.get(key)
+        if v is None or str(v).strip() == "":
+            return fallback
+        return str(v).strip().lower() in ("true", "1", "sim", "yes", "s")
+
+    def _default_choice_index(
+        self,
+        options: List[str],
+        param_key: str,
+        fallback: int = 0,
+    ) -> int:
+        flat = self._flatten_params_for_defaults()
+        val = flat.get(param_key)
+        if val is None or str(val).strip() == "":
+            return fallback
+        opts = list(options)
+        if param_key == "packing.method":
+            needle = normalize_packing_mode(val)
+        else:
+            needle = str(val).strip().lower()
+        try:
+            return opts.index(needle)
+        except ValueError:
+            return fallback
+
     def _load_params_from_bed_path(self, bed_path: Path) -> bool:
         # compila .bed -> .json e preenche self.params com json_to_wizard_params
         try:
@@ -606,37 +640,97 @@ class BedWizard:
             self.ui.err(f"falha ao carregar .bed: {e}")
             return False
 
+    def _discover_bed_files(self) -> List[Path]:
+        # procura .bed em local_data/beds, cwd, raiz do repo e pasta dsl
+        beds: List[Path] = []
+        for base in (
+            beds_dir(),
+            Path.cwd(),
+            Path(__file__).resolve().parents[1],
+            Path(__file__).resolve().parent,
+        ):
+            try:
+                beds.extend(base.glob("*.bed"))
+            except Exception:
+                pass
+        uniq: Dict[str, Path] = {}
+        for p in beds:
+            try:
+                r = p.resolve()
+                uniq[str(r)] = r
+            except Exception:
+                continue
+        return sorted(uniq.values(), key=lambda x: (x.name.lower(), str(x).lower()))
+
+    def _print_bed_files_list(self, beds: List[Path]) -> None:
+        if not beds:
+            self.ui.warn(
+                "nenhum .bed encontrado (pastas: local_data/beds, cwd, raiz do repo, dsl)"
+            )
+            return
+        self.ui.println("ficheiros .bed encontrados (use o numero ou o caminho):")
+        for i, p in enumerate(beds, start=1):
+            self.ui.muted(f"  {i:3}  {p}")
+
     def _maybe_load_existing_bed(self, *, caption: str) -> None:
+        self.skip_questionnaire_after_load = False
         # pergunta ao utilizador se quer carregar um .bed para pre-preencher o questionario
         self.ui.hint("opcional: carregar um .bed existente para pre-preencher as perguntas")
         if not self.get_boolean(f"carregar .bed existente neste modo ({caption})?", default=False):
             return
-        raw = self.ui.ask_line("caminho .bed (ou numero da lista, vazio cancela): ").strip()
-        if not raw:
-            return
-        # tenta resolver por indice simples: lista beds na pasta raiz + cwd
-        beds: List[Path] = []
-        for base in (beds_dir(), Path.cwd(), Path(__file__).resolve().parents[1], Path(__file__).resolve().parent):
-            try:
-                beds.extend(sorted(base.glob("*.bed")))
-            except Exception:
-                pass
-        beds = [p.resolve() for p in dict((str(p.resolve()), p.resolve()) for p in beds).values()]
+        beds = self._discover_bed_files()
+        if self.get_boolean("mostrar lista numerada de ficheiros .bed encontrados?", default=True):
+            self._print_bed_files_list(beds)
+        self.ui.muted(
+            "dica: l ou lista = rever lista; numero ou caminho = escolher; "
+            "vazio ou c = nao carregar e continuar o questionario"
+        )
         bed_path: Optional[Path] = None
-        if raw.isdigit() and beds:
-            idx = int(raw) - 1
-            if 0 <= idx < len(beds):
-                bed_path = beds[idx]
-        if bed_path is None:
-            try:
-                bed_path = resolve_repo_path(raw, base=Path.cwd())
-            except Exception:
-                bed_path = None
-        if bed_path is None:
-            self.ui.warn("entrada invalida; a seguir sem carregar")
-            return
+        while True:
+            raw = self.ui.ask_line(
+                "caminho .bed (numero, l=lista, vazio ou c cancela): "
+            ).strip()
+            if not raw:
+                return
+            low = raw.lower()
+            if low in ("c", "cancel", "cancelar", "voltar", "back"):
+                return
+            if low in ("l", "lista"):
+                self._print_bed_files_list(beds)
+                continue
+            candidate: Optional[Path] = None
+            if raw.isdigit() and beds:
+                idx = int(raw) - 1
+                if 0 <= idx < len(beds):
+                    candidate = beds[idx]
+            if candidate is None:
+                try:
+                    candidate = resolve_repo_path(raw, base=Path.cwd())
+                except Exception:
+                    candidate = None
+            if candidate is None or not candidate.exists():
+                self.ui.warn(
+                    "ficheiro nao encontrado ou indice invalido; tente de novo ou l para lista"
+                )
+                continue
+            bed_path = candidate
+            break
         if self._load_params_from_bed_path(bed_path):
             self.ui.ok(f"carregado: {bed_path.name}")
+            self.ui.muted(
+                "os valores do ficheiro aparecem como padrao entre [colchetes]; "
+                "enter em cada pergunta mantem o que foi carregado."
+            )
+            if self.get_boolean(
+                "saltar o questionario e manter só o carregado "
+                "(nome de ficheiro e confirmacao em seguida)?",
+                default=False,
+            ):
+                self.skip_questionnaire_after_load = True
+                self.ui.muted(
+                    "fluxo curto: parametros iguais ao ficheiro; "
+                    "exportacao, fatia e cfd nao serao repedidos nesta sessao."
+                )
         else:
             self.ui.warn("nao foi possivel carregar; a seguir sem carregar")
 
@@ -801,7 +895,7 @@ class BedWizard:
             default,
             help_callback=_help,
             review_callback=self._param_review_and_edit_menu,
-            cancel_callback=_cancel if self._cancel_enabled else None,
+            cancel_callback=_cancel,
         )
     
     def get_boolean(self, prompt: str, default: bool = True) -> bool:
@@ -812,7 +906,7 @@ class BedWizard:
         return self.ui.confirm(
             prompt,
             default,
-            cancel_callback=_cancel if self._cancel_enabled else None,
+            cancel_callback=_cancel,
         )
     
     def get_list_input(
@@ -1314,31 +1408,124 @@ class BedWizard:
         ph = (lambda k: k) if with_param_help else (lambda _k: "")
         self.print_section("empacotamento")
         method_raw = self.get_choice(
-            "metodo de empacotamento", opts, 0, "packing.method"
+            "metodo de empacotamento",
+            opts,
+            self._default_choice_index(list(opts), "packing.method", 0),
+            "packing.method",
         )
         method = normalize_packing_mode(method_raw)
         pack: Dict[str, Any] = {
             "method": method,
-            "gravity": self.get_number_input("gravidade", "-9.81", "m/s2", True, ph("packing.gravity")),
-            "substeps": int(self.get_number_input("sub-passos de simulacao", "10", "", False, ph("packing.substeps"))),
-            "iterations": int(self.get_number_input("iteracoes", "10", "", False, ph("packing.iterations"))),
-            "damping": self.get_number_input("amortecimento", "0.1", "", False, ph("packing.damping")),
-            "rest_velocity": self.get_number_input("velocidade de repouso", "0.01", "m/s", False, ph("packing.rest_velocity")),
-            "max_time": self.get_number_input("tempo maximo", "5.0", "s", False, ph("packing.max_time")),
-            "collision_margin": self.get_number_input("margem de colisao", "0.001", "m", False, ph("packing.collision_margin")),
+            "gravity": self.get_number_input(
+                "gravidade",
+                self._default_from_loaded("packing.gravity", "-9.81"),
+                "m/s2",
+                True,
+                ph("packing.gravity"),
+            ),
+            "substeps": int(
+                self.get_number_input(
+                    "sub-passos de simulacao",
+                    self._default_from_loaded("packing.substeps", "10"),
+                    "",
+                    False,
+                    ph("packing.substeps"),
+                )
+            ),
+            "iterations": int(
+                self.get_number_input(
+                    "iteracoes",
+                    self._default_from_loaded("packing.iterations", "10"),
+                    "",
+                    False,
+                    ph("packing.iterations"),
+                )
+            ),
+            "damping": self.get_number_input(
+                "amortecimento",
+                self._default_from_loaded("packing.damping", "0.1"),
+                "",
+                False,
+                ph("packing.damping"),
+            ),
+            "rest_velocity": self.get_number_input(
+                "velocidade de repouso",
+                self._default_from_loaded("packing.rest_velocity", "0.01"),
+                "m/s",
+                False,
+                ph("packing.rest_velocity"),
+            ),
+            "max_time": self.get_number_input(
+                "tempo maximo",
+                self._default_from_loaded("packing.max_time", "5.0"),
+                "s",
+                False,
+                ph("packing.max_time"),
+            ),
+            "collision_margin": self.get_number_input(
+                "margem de colisao",
+                self._default_from_loaded("packing.collision_margin", "0.001"),
+                "m",
+                False,
+                ph("packing.collision_margin"),
+            ),
         }
         if method == "spherical_packing":
-            pack["gap"] = float(self.get_number_input("gap entre esferas", "0.0001", "m", False, ph("packing.gap")))
-            pack["random_seed"] = int(self.get_number_input("random_seed", "42", "", False, ph("packing.random_seed")))
-            pack["max_placement_attempts"] = int(self.get_number_input("max tentativas colocacao", "500000", "", False, ph("packing.max_placement_attempts")))
-            sv = self.get_boolean("strict_validation (falhar se invalido)?", True)
+            pack["gap"] = float(
+                self.get_number_input(
+                    "gap entre esferas",
+                    self._default_from_loaded("packing.gap", "0.0001"),
+                    "m",
+                    False,
+                    ph("packing.gap"),
+                )
+            )
+            pack["random_seed"] = int(
+                self.get_number_input(
+                    "random_seed",
+                    self._default_from_loaded("packing.random_seed", "42"),
+                    "",
+                    False,
+                    ph("packing.random_seed"),
+                )
+            )
+            pack["max_placement_attempts"] = int(
+                self.get_number_input(
+                    "max tentativas colocacao",
+                    self._default_from_loaded("packing.max_placement_attempts", "500000"),
+                    "",
+                    False,
+                    ph("packing.max_placement_attempts"),
+                )
+            )
+            sv = self.get_boolean(
+                "strict_validation (falhar se invalido)?",
+                self._default_bool_from_loaded("packing.strict_validation", True),
+            )
             pack["strict_validation"] = sv
         elif method == "hexagonal_3d":
-            pack["gap"] = float(self.get_number_input("gap entre esferas", "0.0001", "m", False, ph("packing.gap")))
-            step_raw = self.get_number_input("step_x grade hex (vazio=auto)", "", "m", False, ph("packing.step_x"))
+            pack["gap"] = float(
+                self.get_number_input(
+                    "gap entre esferas",
+                    self._default_from_loaded("packing.gap", "0.0001"),
+                    "m",
+                    False,
+                    ph("packing.gap"),
+                )
+            )
+            step_raw = self.get_number_input(
+                "step_x grade hex (vazio=auto)",
+                self._default_from_loaded("packing.step_x", ""),
+                "m",
+                False,
+                ph("packing.step_x"),
+            )
             if step_raw.strip():
                 pack["step_x"] = float(step_raw)
-            sv = self.get_boolean("strict_validation (falhar se invalido)?", True)
+            sv = self.get_boolean(
+                "strict_validation (falhar se invalido)?",
+                self._default_bool_from_loaded("packing.strict_validation", True),
+            )
             pack["strict_validation"] = sv
         return pack
 
@@ -1349,22 +1536,52 @@ class BedWizard:
         fluid_modes = ["none", "cavity"]
         self.params.setdefault("export", {})
         e = self.params["export"]
-        e["formats"] = self.get_list_input(
+        got_fmt = self.get_list_input(
             "formatos de exportacao", ",", "export.formats"
-        ) or ["stl_binary", "obj"]
-        e["units"] = self.get_input("unidades de saida", "m", False, "export.units")
+        )
+        if got_fmt:
+            e["formats"] = got_fmt
+        else:
+            fed = self._default_from_loaded("export.formats", "")
+            if fed.strip():
+                e["formats"] = [x.strip() for x in fed.split(",") if x.strip()]
+            else:
+                e["formats"] = ["stl_binary", "obj"]
+        e["units"] = self.get_input(
+            "unidades de saida",
+            self._default_from_loaded("export.units", "m"),
+            False,
+            "export.units",
+        )
         e["scale"] = self.get_number_input(
-            "escala", "1.0", "", False, "export.scale"
+            "escala",
+            self._default_from_loaded("export.scale", "1.0"),
+            "",
+            False,
+            "export.scale",
         )
         e["wall_mode"] = self.get_choice(
-            "modo da parede", wall_modes, 0, "export.wall_mode"
+            "modo da parede",
+            wall_modes,
+            self._default_choice_index(wall_modes, "export.wall_mode", 0),
+            "export.wall_mode",
         )
         e["fluid_mode"] = self.get_choice(
-            "modo do fluido", fluid_modes, 0, "export.fluid_mode"
+            "modo do fluido",
+            fluid_modes,
+            self._default_choice_index(fluid_modes, "export.fluid_mode", 0),
+            "export.fluid_mode",
         )
-        e["manifold_check"] = self.get_boolean("verificar manifold", True)
+        e["manifold_check"] = self.get_boolean(
+            "verificar manifold",
+            self._default_bool_from_loaded("export.manifold_check", True),
+        )
         e["merge_distance"] = self.get_number_input(
-            "distancia de fusao", "0.001", "m", False, "export.merge_distance"
+            "distancia de fusao",
+            self._default_from_loaded("export.merge_distance", "0.001"),
+            "m",
+            False,
+            "export.merge_distance",
         )
 
     def _questionnaire_slice_section(self) -> None:
@@ -1440,10 +1657,16 @@ class BedWizard:
         self.params.setdefault("lids", {})
         ld = self.params["lids"]
         ld["top_type"] = self.get_choice(
-            "tipo da tampa superior", lid_types, 0, "lids.top_type"
+            "tipo da tampa superior",
+            lid_types,
+            self._default_choice_index(lid_types, "lids.top_type", 0),
+            "lids.top_type",
         )
         ld["bottom_type"] = self.get_choice(
-            "tipo da tampa inferior", lid_types, 0, "lids.bottom_type"
+            "tipo da tampa inferior",
+            lid_types,
+            self._default_choice_index(lid_types, "lids.bottom_type", 0),
+            "lids.bottom_type",
         )
         ld["top_thickness"] = self.get_number_input(
             "espessura tampa superior",
@@ -1472,7 +1695,10 @@ class BedWizard:
         self.params.setdefault("particles", {})
         pt = self.params["particles"]
         pt["kind"] = self.get_choice(
-            "tipo de particula", particle_kinds, 0, "particles.kind"
+            "tipo de particula",
+            particle_kinds,
+            self._default_choice_index(particle_kinds, "particles.kind", 0),
+            "particles.kind",
         )
         pt["diameter"] = self.get_number_input(
             "diametro das particulas",
@@ -1613,10 +1839,12 @@ class BedWizard:
             self._hint_controles_entrada()
             self.ui.println()
             self._maybe_load_existing_bed(caption="questionario")
-            self._fill_params_from_questionnaire()
-            self.output_file = self.get_input(
-                "nome do arquivo de saida", "meu_leito.bed"
-            )
+            if not self.skip_questionnaire_after_load:
+                self._fill_params_from_questionnaire()
+            _out_default = "meu_leito.bed"
+            if self.output_file:
+                _out_default = Path(self.output_file).name
+            self.output_file = self.get_input("nome do arquivo de saida", _out_default)
             self.confirm_and_save()
         except _WizardCancelled:
             self.ui.muted("cancelado. a voltar ao menu inicial")
@@ -2051,113 +2279,218 @@ cfd {
     def _questionnaire_blender_bed_lids_particles_packing(self) -> None:
         """geometria, tampas, particulas e empacotamento com ajuda rica (modo blender)."""
         self.print_section("geometria do leito")
-        self.params["bed"] = {
-            "diameter": self.get_number_input(
-                "diametro do leito", "0.05", "m", True, "bed.diameter"
-            ),
-            "height": self.get_number_input(
-                "altura do leito", "0.1", "m", True, "bed.height"
-            ),
-            "wall_thickness": self.get_number_input(
-                "espessura da parede", "0.002", "m", True, "bed.wall_thickness"
-            ),
-            "clearance": self.get_number_input(
-                "folga superior", "0.01", "m", True, "bed.clearance"
-            ),
-            "material": self.get_input("material da parede", "steel"),
-            "roughness": self.get_number_input(
-                "rugosidade", "0.0", "m", False, "bed.roughness"
-            ),
-        }
+        self.params.setdefault("bed", {})
+        bd = self.params["bed"]
+        bd["diameter"] = self.get_number_input(
+            "diametro do leito",
+            self._default_from_loaded("bed.diameter", "0.05"),
+            "m",
+            True,
+            "bed.diameter",
+        )
+        bd["height"] = self.get_number_input(
+            "altura do leito",
+            self._default_from_loaded("bed.height", "0.1"),
+            "m",
+            True,
+            "bed.height",
+        )
+        bd["wall_thickness"] = self.get_number_input(
+            "espessura da parede",
+            self._default_from_loaded("bed.wall_thickness", "0.002"),
+            "m",
+            True,
+            "bed.wall_thickness",
+        )
+        bd["clearance"] = self.get_number_input(
+            "folga superior",
+            self._default_from_loaded("bed.clearance", "0.01"),
+            "m",
+            True,
+            "bed.clearance",
+        )
+        bd["material"] = self.get_input(
+            "material da parede",
+            self._default_from_loaded("bed.material", "steel"),
+            True,
+            "bed.material",
+        )
+        bd["roughness"] = self.get_number_input(
+            "rugosidade",
+            self._default_from_loaded("bed.roughness", "0.0"),
+            "m",
+            False,
+            "bed.roughness",
+        )
+
         self.print_section("tampas")
         lid_types = ["flat", "hemispherical", "none"]
-        self.params["lids"] = {
-            "top_type": self.get_choice("tipo da tampa superior", lid_types),
-            "bottom_type": self.get_choice("tipo da tampa inferior", lid_types),
-            "top_thickness": self.get_number_input(
-                "espessura tampa superior", "0.003", "m", True, "lids.top_thickness"
-            ),
-            "bottom_thickness": self.get_number_input(
-                "espessura tampa inferior", "0.003", "m", True, "lids.bottom_thickness"
-            ),
-            "seal_clearance": self.get_number_input(
-                "folga do selo", "0.001", "m", False, "lids.seal_clearance"
-            ),
-        }
+        self.params.setdefault("lids", {})
+        ld = self.params["lids"]
+        ld["top_type"] = self.get_choice(
+            "tipo da tampa superior",
+            lid_types,
+            self._default_choice_index(lid_types, "lids.top_type", 0),
+            "lids.top_type",
+        )
+        ld["bottom_type"] = self.get_choice(
+            "tipo da tampa inferior",
+            lid_types,
+            self._default_choice_index(lid_types, "lids.bottom_type", 0),
+            "lids.bottom_type",
+        )
+        ld["top_thickness"] = self.get_number_input(
+            "espessura tampa superior",
+            self._default_from_loaded("lids.top_thickness", "0.003"),
+            "m",
+            True,
+            "lids.top_thickness",
+        )
+        ld["bottom_thickness"] = self.get_number_input(
+            "espessura tampa inferior",
+            self._default_from_loaded("lids.bottom_thickness", "0.003"),
+            "m",
+            True,
+            "lids.bottom_thickness",
+        )
+        ld["seal_clearance"] = self.get_number_input(
+            "folga do selo",
+            self._default_from_loaded("lids.seal_clearance", "0.001"),
+            "m",
+            False,
+            "lids.seal_clearance",
+        )
+
         self.print_section("particulas")
         particle_kinds = ["sphere", "cube", "cylinder"]
-        self.params["particles"] = {
-            "kind": self.get_choice("tipo de particula", particle_kinds),
-            "diameter": self.get_number_input(
-                "diametro das particulas", "0.005", "m", True, "particles.diameter"
-            ),
-            "count": int(
-                self.get_number_input(
-                    "numero de particulas", "100", "", True, "particles.count"
-                )
-            ),
-            "target_porosity": self.get_number_input(
-                "porosidade alvo", "0.4", "", False, "particles.target_porosity"
-            ),
-            "density": self.get_number_input(
-                "densidade do material", "2500.0", "kg/m3", True, "particles.density"
-            ),
-            "mass": self.get_number_input(
-                "massa das particulas", "0.0", "g", False, "particles.mass"
-            ),
-            "restitution": self.get_number_input(
-                "coeficiente de restituicao", "0.3", "", False, "particles.restitution"
-            ),
-            "friction": self.get_number_input(
-                "coeficiente de atrito", "0.5", "", False, "particles.friction"
-            ),
-            "rolling_friction": self.get_number_input(
-                "atrito de rolamento", "0.1", "", False, "particles.rolling_friction"
-            ),
-            "linear_damping": self.get_number_input(
-                "amortecimento linear", "0.1", "", False, "particles.linear_damping"
-            ),
-            "angular_damping": self.get_number_input(
-                "amortecimento angular", "0.1", "", False, "particles.angular_damping"
-            ),
-            "seed": int(
-                self.get_number_input(
-                    "seed para reproducibilidade", "42", "", False, "particles.seed"
-                )
-            ),
-        }
+        self.params.setdefault("particles", {})
+        pt = self.params["particles"]
+        pt["kind"] = self.get_choice(
+            "tipo de particula",
+            particle_kinds,
+            self._default_choice_index(particle_kinds, "particles.kind", 0),
+            "particles.kind",
+        )
+        pt["diameter"] = self.get_number_input(
+            "diametro das particulas",
+            self._default_from_loaded("particles.diameter", "0.005"),
+            "m",
+            True,
+            "particles.diameter",
+        )
+        pt["count"] = int(
+            self.get_number_input(
+                "numero de particulas",
+                self._default_from_loaded("particles.count", "100"),
+                "",
+                True,
+                "particles.count",
+            )
+        )
+        pt["target_porosity"] = self.get_number_input(
+            "porosidade alvo",
+            self._default_from_loaded("particles.target_porosity", "0.4"),
+            "",
+            False,
+            "particles.target_porosity",
+        )
+        pt["density"] = self.get_number_input(
+            "densidade do material",
+            self._default_from_loaded("particles.density", "2500.0"),
+            "kg/m3",
+            True,
+            "particles.density",
+        )
+        pt["mass"] = self.get_number_input(
+            "massa das particulas",
+            self._default_from_loaded("particles.mass", "0.0"),
+            "g",
+            False,
+            "particles.mass",
+        )
+        pt["restitution"] = self.get_number_input(
+            "coeficiente de restituicao",
+            self._default_from_loaded("particles.restitution", "0.3"),
+            "",
+            False,
+            "particles.restitution",
+        )
+        pt["friction"] = self.get_number_input(
+            "coeficiente de atrito",
+            self._default_from_loaded("particles.friction", "0.5"),
+            "",
+            False,
+            "particles.friction",
+        )
+        pt["rolling_friction"] = self.get_number_input(
+            "atrito de rolamento",
+            self._default_from_loaded("particles.rolling_friction", "0.1"),
+            "",
+            False,
+            "particles.rolling_friction",
+        )
+        pt["linear_damping"] = self.get_number_input(
+            "amortecimento linear",
+            self._default_from_loaded("particles.linear_damping", "0.1"),
+            "",
+            False,
+            "particles.linear_damping",
+        )
+        pt["angular_damping"] = self.get_number_input(
+            "amortecimento angular",
+            self._default_from_loaded("particles.angular_damping", "0.1"),
+            "",
+            False,
+            "particles.angular_damping",
+        )
+        pt["seed"] = int(
+            self.get_number_input(
+                "seed para reproducibilidade",
+                self._default_from_loaded("particles.seed", "42"),
+                "",
+                False,
+                "particles.seed",
+            )
+        )
         self.params["packing"] = self._collect_packing_params(with_param_help=True)
 
     def blender_generation_mode(self) -> None:
         """questionario 3d sem cfd; export igual ao questionario; escolha de abertura do blender."""
-        self.clear_screen()
-        self.print_header("geracao 3d (blender)", "sem cfd; export configuravel como no questionario")
-        self.ui.breadcrumbs("wizard", "blender-3d")
-        self.ui.muted("parametros cfd nao sao pedidos neste modo.")
-        self._hint_fluxo_blender()
-        self._hint_controles_entrada()
-        self.ui.println()
-        self._maybe_load_existing_bed(caption="geracao 3d (blender)")
-        self._questionnaire_blender_bed_lids_particles_packing()
-        self._questionnaire_export_section()
-        self._questionnaire_slice_section()
-        self.ui.hint("secao cfd omitida neste modo")
-        self.output_file = self.get_input("nome do arquivo de saida", "leito_blender.bed")
-        opt_nunca = "nao abrir o blender apos gerar"
-        opt_perg = "perguntar se deseja abrir o blender apos gerar"
-        opt_auto = "abrir o blender automaticamente apos gerar"
-        escolha = self.get_choice(
-            "comportamento apos gerar o modelo",
-            [opt_nunca, opt_perg, opt_auto],
-            1,
-        )
-        if escolha == opt_auto:
-            policy = "always"
-        elif escolha == opt_perg:
-            policy = "ask"
-        else:
-            policy = "never"
-        self._confirm_and_generate_blender(open_policy=policy)
+        try:
+            self.clear_screen()
+            self.print_header("geracao 3d (blender)", "sem cfd; export configuravel como no questionario")
+            self.ui.breadcrumbs("wizard", "blender-3d")
+            self.ui.muted("parametros cfd nao sao pedidos neste modo.")
+            self._hint_fluxo_blender()
+            self._hint_controles_entrada()
+            self.ui.println()
+            self._maybe_load_existing_bed(caption="geracao 3d (blender)")
+            if not self.skip_questionnaire_after_load:
+                self._questionnaire_blender_bed_lids_particles_packing()
+                self._questionnaire_export_section()
+                self._questionnaire_slice_section()
+            self.ui.hint("secao cfd omitida neste modo")
+            _blend_out = "leito_blender.bed"
+            if self.output_file:
+                _blend_out = Path(self.output_file).name
+            self.output_file = self.get_input("nome do arquivo de saida", _blend_out)
+            opt_nunca = "nao abrir o blender apos gerar"
+            opt_perg = "perguntar se deseja abrir o blender apos gerar"
+            opt_auto = "abrir o blender automaticamente apos gerar"
+            escolha = self.get_choice(
+                "comportamento apos gerar o modelo",
+                [opt_nunca, opt_perg, opt_auto],
+                1,
+            )
+            if escolha == opt_auto:
+                policy = "always"
+            elif escolha == opt_perg:
+                policy = "ask"
+            else:
+                policy = "never"
+            self._confirm_and_generate_blender(open_policy=policy)
+        except _WizardCancelled:
+            self.ui.muted("cancelado.")
 
     def _confirm_and_generate_blender(self, open_policy: str) -> None:
         """open_policy: never | ask | always — gera .bed, compila, executa blender."""
@@ -2448,7 +2781,7 @@ cfd {
         self.ui.render_help_section_menu(entries, back_key="0")
         choice = self.ui.ask_line("opcao (0-6): ").strip()
         
-        if choice == '0':
+        if choice == "0" or choice.lower() in ("c", "cancel", "cancelar", "voltar"):
             return
         elif choice in sections:
             section_key, section_desc = sections[choice]
@@ -2491,8 +2824,20 @@ cfd {
         self.ui.println()
         self.ui.warn("tempo estimado 10-30 min | blender | wsl2 + openfoam | ~2 gb disco")
         self.ui.println()
-        
-        if not self.ui.confirm("deseja continuar?", default=False):
+
+        def _pipe_cancel() -> None:
+            raise _WizardCancelled()
+
+        try:
+            continuar = self.ui.confirm(
+                "deseja continuar?",
+                default=False,
+                cancel_callback=_pipe_cancel,
+            )
+        except _WizardCancelled:
+            self.ui.muted("cancelado.")
+            return
+        if not continuar:
             self.ui.muted("operacao cancelada")
             return
         
@@ -2500,7 +2845,8 @@ cfd {
         self.ui.section("etapa 1/5 — parametrizacao do leito")
         try:
             self._maybe_load_existing_bed(caption="pipeline completo")
-            self.interactive_questionnaire()
+            if not self.skip_questionnaire_after_load:
+                self.interactive_questionnaire()
         except _WizardCancelled:
             self.ui.muted("cancelado. a voltar ao menu inicial")
             self.params = {}
@@ -2514,12 +2860,20 @@ cfd {
         # gerar arquivo .bed
         self.ui.section("etapa 2/5 — geracao e compilacao do .bed")
         
-        output_name = self.ui.ask_line(
-            "nome do arquivo .bed (sem extensao) [leito_pipeline]: ",
-            default="leito_pipeline",
-        ).strip()
+        _pipe_stem = "leito_pipeline"
+        if self.skip_questionnaire_after_load and self.output_file:
+            _pipe_stem = Path(self.output_file).stem
+        try:
+            output_name = self.ui.ask_line(
+                "nome do arquivo .bed (sem extensao) [leito_pipeline]: ",
+                default=_pipe_stem,
+            ).strip()
+            self._maybe_cancel(output_name)
+        except _WizardCancelled:
+            self.ui.muted("cancelado.")
+            return
         if not output_name:
-            output_name = "leito_pipeline"
+            output_name = _pipe_stem or "leito_pipeline"
         
         self.output_file = f"{output_name}.bed"
         
@@ -2869,22 +3223,27 @@ cfd {
         while True:
             self._draw_start_menu()
             choice = self.ui.ask_line(self._t("prompt.start.choice", "opcao (0-5): ")).strip()
+            if choice.lower() in ("c", "cancel", "cancelar", "voltar"):
+                return
             if choice == "0":
                 return
-            if choice == "1":
-                self.smart_start_flow()
-            elif choice == "2":
-                self.interactive_mode()
-            elif choice == "3":
-                self.templates_e_testes_menu()
-            elif choice == "4":
-                self.blender_generation_mode()
-            elif choice == "5":
-                self.pipeline_completo_mode()
-            else:
-                self.ui.warn("escolha um numero de 0 a 5")
-                self.ui.pause("enter...")
-                continue
+            try:
+                if choice == "1":
+                    self.smart_start_flow()
+                elif choice == "2":
+                    self.interactive_mode()
+                elif choice == "3":
+                    self.templates_e_testes_menu()
+                elif choice == "4":
+                    self.blender_generation_mode()
+                elif choice == "5":
+                    self.pipeline_completo_mode()
+                else:
+                    self.ui.warn("escolha um numero de 0 a 5")
+                    self.ui.pause("enter...")
+                    continue
+            except _WizardCancelled:
+                self.ui.muted("cancelado.")
             self.ui.pause("enter para voltar ao submenu comecar...")
 
     def templates_e_testes_menu(self) -> None:
@@ -2897,29 +3256,36 @@ cfd {
             )
             self.ui.breadcrumbs("wizard", "comecar", "templates-testes")
             self.ui.println()
-            fluxo = self.get_choice(
-                "fluxo",
-                [
-                    "carregar template json (dsl/wizard_templates)",
-                    "editor .bed classico (template + editor externo)",
-                    "testes rapidos (ficheiro .bed ou .json ja existente)",
-                    "voltar ao submenu comecar",
-                ],
-                3,
-            )
+            try:
+                fluxo = self.get_choice(
+                    "fluxo",
+                    [
+                        "carregar template json (dsl/wizard_templates)",
+                        "editor .bed classico (template + editor externo)",
+                        "testes rapidos (ficheiro .bed ou .json ja existente)",
+                        "voltar ao submenu comecar",
+                    ],
+                    3,
+                )
+            except _WizardCancelled:
+                return
             if fluxo.startswith("voltar"):
                 return
-            if fluxo.startswith("testes"):
-                self.tests_quick_menu()
-                self.ui.pause("enter para voltar...")
-                continue
-            if fluxo.startswith("carregar"):
-                self.template_mode(prefer="json")
-                self.ui.pause("enter para voltar...")
-                continue
-            if fluxo.startswith("editor"):
-                self.template_mode(prefer="editor")
-                self.ui.pause("enter para voltar...")
+            try:
+                if fluxo.startswith("testes"):
+                    self.tests_quick_menu()
+                    self.ui.pause("enter para voltar...")
+                    continue
+                if fluxo.startswith("carregar"):
+                    self.template_mode(prefer="json")
+                    self.ui.pause("enter para voltar...")
+                    continue
+                if fluxo.startswith("editor"):
+                    self.template_mode(prefer="editor")
+                    self.ui.pause("enter para voltar...")
+                    continue
+            except _WizardCancelled:
+                self.ui.muted("cancelado.")
                 continue
             self.ui.warn("opcao nao reconhecida")
             self.ui.pause("enter...")
@@ -2933,47 +3299,50 @@ cfd {
         )
         self.ui.breadcrumbs("wizard", "comecar", "assistente")
         self.ui.println()
-        objetivo = self.get_choice(
-            "o que pretende fazer agora",
-            [
-                "gerar .bed com questionario completo (cfd opcional)",
-                "gerar modelo 3d sem cfd (mesmo questionario que o modo blender)",
-                "pipeline completo (questionario + blender + openfoam no wsl)",
-            ],
-            0,
-        )
-        if objetivo.startswith("gerar .bed"):
-            self.interactive_mode()
-            return
-        if objetivo.startswith("gerar modelo 3d"):
-            backend = self.get_choice(
-                "backend preferido para o modelo 3d",
+        try:
+            objetivo = self.get_choice(
+                "o que pretende fazer agora",
                 [
-                    "blender (recomendado para o leito completo neste projeto)",
-                    "python puro (gera .bed no questionario; depois use testes rapidos com o .json)",
+                    "gerar .bed com questionario completo (cfd opcional)",
+                    "gerar modelo 3d sem cfd (mesmo questionario que o modo blender)",
+                    "pipeline completo (questionario + blender + openfoam no wsl)",
                 ],
                 0,
             )
-            if backend.startswith("blender"):
-                self.blender_generation_mode()
-            else:
-                self.ui.hint(
-                    "fluxo sugerido: questionario interativo para gerar e compilar o .bed; "
-                    "depois menu comecar > templates e testes > testes rapidos com o .json."
-                )
-                self.ui.println()
+            if objetivo.startswith("gerar .bed"):
                 self.interactive_mode()
-            return
-        if objetivo.startswith("pipeline"):
-            self.ui.warn(
-                "requer blender, wsl2 e openfoam; tempo longo e uso elevado de disco."
-            )
-            if self.get_boolean("confirmo requisitos e quero continuar", default=False):
-                self.pipeline_completo_mode()
-            else:
-                self.ui.muted("cancelado no assistente.")
-            return
-        self.ui.warn("opcao nao reconhecida no assistente.")
+                return
+            if objetivo.startswith("gerar modelo 3d"):
+                backend = self.get_choice(
+                    "backend preferido para o modelo 3d",
+                    [
+                        "blender (recomendado para o leito completo neste projeto)",
+                        "python puro (gera .bed no questionario; depois use testes rapidos com o .json)",
+                    ],
+                    0,
+                )
+                if backend.startswith("blender"):
+                    self.blender_generation_mode()
+                else:
+                    self.ui.hint(
+                        "fluxo sugerido: questionario interativo para gerar e compilar o .bed; "
+                        "depois menu comecar > templates e testes > testes rapidos com o .json."
+                    )
+                    self.ui.println()
+                    self.interactive_mode()
+                return
+            if objetivo.startswith("pipeline"):
+                self.ui.warn(
+                    "requer blender, wsl2 e openfoam; tempo longo e uso elevado de disco."
+                )
+                if self.get_boolean("confirmo requisitos e quero continuar", default=False):
+                    self.pipeline_completo_mode()
+                else:
+                    self.ui.muted("cancelado no assistente.")
+                return
+            self.ui.warn("opcao nao reconhecida no assistente.")
+        except _WizardCancelled:
+            self.ui.muted("cancelado.")
     
     def _draw_main_menu(self) -> None:
         """tela inicial estilo navegador (barra + tabela de modos)."""
@@ -3001,11 +3370,15 @@ cfd {
         cur = self._t("lang.pt", "portugues") if self.lang == "pt" else self._t("lang.en", "ingles")
         self.ui.muted(f"{self._t('lang.current', 'idioma atual')}: {cur}")
         self.ui.println()
-        pick = self.get_choice(
-            self._t("lang.choose", "escolha o idioma"),
-            [self._t("lang.pt", "portugues"), self._t("lang.en", "ingles")],
-            0 if self.lang == "pt" else 1,
-        )
+        try:
+            pick = self.get_choice(
+                self._t("lang.choose", "escolha o idioma"),
+                [self._t("lang.pt", "portugues"), self._t("lang.en", "ingles")],
+                0 if self.lang == "pt" else 1,
+            )
+        except _WizardCancelled:
+            self.ui.muted("cancelado.")
+            return
         self.lang = "pt" if pick == self._t("lang.pt", "portugues") else "en"
         self.ui.ok(self._t("lang.ok", "idioma atualizado"))
 
@@ -3019,7 +3392,11 @@ cfd {
         while True:
             self._draw_main_menu()
             choice = self.ui.ask_line(self._t("prompt.main.choice", "opcao (1-6): ")).strip()
-            
+            if choice.lower() in ("c", "cancel", "cancelar", "voltar"):
+                self.ui.muted("no menu principal nao ha nivel acima; use 6 para sair.")
+                self.ui.pause("enter...")
+                continue
+
             if choice == "1":
                 self.run_start_menu()
                 self.ui.pause("enter para voltar ao menu principal...")

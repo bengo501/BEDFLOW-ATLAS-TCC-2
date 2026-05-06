@@ -1,6 +1,21 @@
+# dependencias para visualizacao 3d local (mesh_viewer_desktop.py e opcao open3d no wizard)
+#
+# windows + python da loja (microsoft store): a instalacao do open3d pode falhar com
+# OSError / Errno 2 em ficheiros com caminho muito longo dentro de
+# AppData\Local\Packages\...\local-packages\share\jupyter\...
+# mitigacao recomendada (uma basta):
+#   1) ativar caminhos longos no windows:
+#      gpedit.msc -> configuracao do computador -> modelos administrativos ->
+#      sistema -> sistema de ficheiros -> ativar caminhos longos do win32 = ativado
+#      ou regedit: HKLM\SYSTEM\CurrentControlSet\Control\FileSystem LongPathsEnabled = 1
+#   2) ou usar um venv numa pasta curta, ex.:  C:\venv\bedflow
+#      python -m venv C:\venv\bedflow
+#      C:\venv\bedflow\Scripts\activate
+#      pip install -r requirements-visualizacao.txt
+
 numpy==1.26.4
 PyOpenGL==3.1.7
 glfw==2.7.0
 
-# visualizador desktop opcional (mesh_viewer_desktop.py / modo cli)
-# open3d>=0.18.0
+# visualizador desktop via open3d (stl/obj/ply)
+open3d>=0.18.0,<0.20.0
