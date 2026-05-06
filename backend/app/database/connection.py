@@ -11,6 +11,12 @@ from dotenv import load_dotenv
 # carrega variaveis de um ficheiro env ao lado do projeto se existir
 load_dotenv()
 
+try:
+    from bedflow_local_paths import ensure_local_data_layout
+except ImportError:
+    def ensure_local_data_layout() -> None:
+        pass
+
 # raiz do repositorio (backend/app/database -> quatro niveis acima)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 _LOCAL_DATA = _PROJECT_ROOT / "local_data"
@@ -56,6 +62,7 @@ class DatabaseConnection:
             _LOCAL_DATA.mkdir(parents=True, exist_ok=True)
         except OSError:
             pass
+        ensure_local_data_layout()
         # create all varre metadata registrada nas classes que herdam base
         Base.metadata.create_all(bind=engine)
         # migracao manual leve para bases sqlite antigas

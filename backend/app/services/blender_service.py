@@ -6,6 +6,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional
 
+from bedflow_local_paths import models_3d_dir, resolve_existing_artifact
+
 from backend.app.api.models import JobStatus
 from backend.app import config as app_config
 
@@ -34,8 +36,7 @@ class BlenderService:
         self.project_root = Path(__file__).parent.parent.parent.parent
         self.scripts_dir = self.project_root / "scripts" / "blender_scripts"
         self.leito_script = self.scripts_dir / "leito_extracao.py"
-        self.output_dir = self.project_root / "generated" / "3d" / "output"
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.output_dir = models_3d_dir()
         self.python_stl_script = (
             self.project_root / "scripts" / "python_modeling" / "packed_bed_stl.py"
         )
@@ -117,7 +118,11 @@ class BlenderService:
             
             # preparar caminhos
             json_path = self.project_root / json_file
-            
+            if not json_path.exists():
+                alt = resolve_existing_artifact(str(json_file).replace("\\", "/").lstrip("/"))
+                if alt and alt.is_file():
+                    json_path = alt
+
             if not json_path.exists():
                 raise FileNotFoundError(f"arquivo json não encontrado: {json_file}")
             

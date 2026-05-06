@@ -183,7 +183,7 @@ async def list_jobs(status: str = None, job_type: str = None):
 async def list_files(file_type: str):
     """
     lista arquivos por tipo
-    tipos: bed, json, blend, stl, simulations (pastas em generated/cfd)
+    tipos: bed, json, blend, stl, simulations (pastas em local_data/simulations e legado generated/cfd)
     """
     type_mapping = {
         "bed": (".", [".bed"]),

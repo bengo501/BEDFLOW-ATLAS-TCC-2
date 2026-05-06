@@ -25,6 +25,9 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 _DSL_DIR = Path(__file__).resolve().parent
 # raiz do repositorio um nivel acima de dsl usada para achar scripts blender
 _REPO_ROOT = _DSL_DIR.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+from bedflow_local_paths import beds_dir, models_3d_dir, simulations_dir
 # caminho para packed bed science e leito extracao dentro de scripts blender scripts
 _BLENDER_SCRIPTS = _REPO_ROOT / "scripts" / "blender_scripts"
 # inserir esse caminho no inicio de sys path para importar packed bed science como pacote
@@ -584,7 +587,7 @@ class BedWizard:
             return
         # tenta resolver por indice simples: lista beds na pasta raiz + cwd
         beds: List[Path] = []
-        for base in (Path.cwd(), Path(__file__).resolve().parents[1], Path(__file__).resolve().parent):
+        for base in (beds_dir(), Path.cwd(), Path(__file__).resolve().parents[1], Path(__file__).resolve().parent):
             try:
                 beds.extend(sorted(base.glob("*.bed")))
             except Exception:
@@ -1813,10 +1816,20 @@ cfd {
         else:
             self.ui.muted("operacao cancelada.")
     
+    def _normalize_bed_output_path(self) -> None:
+        # caminhos relativos gravam em local_data/beds
+        if not self.output_file:
+            return
+        p = Path(self.output_file)
+        if p.is_absolute():
+            return
+        self.output_file = str((beds_dir() / p).resolve())
+
     def save_bed_file(self):
         """salvar arquivo .bed com conteudo gerado"""
+        self._normalize_bed_output_path()
         content = self.generate_bed_content()  # gerar conteudo do arquivo
-        
+
         # escrever arquivo com codificacao utf-8
         with open(self.output_file, 'w', encoding='utf-8') as f:
             f.write(content)
@@ -1828,6 +1841,7 @@ cfd {
         # nao mostra confirmacao rica apenas grava e devolve bool
         # parent mkdir garante pastas intermediarias se output bed tiver caminho profundo
         try:
+            self._normalize_bed_output_path()
             content = self.generate_bed_content()
             Path(self.output_file).parent.mkdir(parents=True, exist_ok=True)
             with open(self.output_file, "w", encoding="utf-8") as f:
@@ -2203,8 +2217,7 @@ cfd {
         try:
             project_root = Path(__file__).parent.parent
             blender_script = project_root / "scripts" / "blender_scripts" / "leito_extracao.py"
-            output_dir = project_root / "generated" / "3d" / "output"
-            output_dir.mkdir(parents=True, exist_ok=True)
+            output_dir = models_3d_dir()
 
             json_file = Path(json_file).resolve()
             if output_blend is None:
@@ -2565,7 +2578,7 @@ cfd {
             self.ui.ok("  arquivos validados")
             
             # determinar diretorio de saida
-            output_root = Path(__file__).parent.parent / "generated" / "cfd"
+            output_root = simulations_dir()
             output_root.mkdir(parents=True, exist_ok=True)
             
             # encontrar script de setup

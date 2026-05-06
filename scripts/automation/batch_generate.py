@@ -8,12 +8,18 @@ from pathlib import Path
 import itertools
 import time
 
+_REPO = Path(__file__).resolve().parent.parent.parent
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+from bedflow_local_paths import aux_dir
+
 class BatchGenerator:
     """classe para gerar multiplos leitos variando parametros"""
     
     def __init__(self):
         self.project_root = Path(__file__).parent.parent.parent
-        self.output_dir = self.project_root / "generated" / "batch"
+        self.output_dir = aux_dir() / "batch"
+        self.output_dir.mkdir(parents=True, exist_ok=True)
         self.dsl_dir = self.project_root / "dsl"
         self.wizard = self.dsl_dir / "bed_wizard.py"
         self.compiler = self.dsl_dir / "compiler" / "bed_compiler_antlr_standalone.py"

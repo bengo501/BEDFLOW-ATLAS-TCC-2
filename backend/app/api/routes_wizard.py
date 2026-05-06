@@ -11,6 +11,8 @@ import subprocess
 import sys
 import tempfile
 
+from bedflow_local_paths import beds_dir
+
 router = APIRouter()
 
 
@@ -98,8 +100,7 @@ async def create_bed_from_wizard(request: WizardRequest):
         # definir caminhos
         project_root = Path(__file__).parent.parent.parent.parent
         dsl_dir = project_root / "dsl"
-        output_dir = project_root / "generated" / "configs"
-        output_dir.mkdir(parents=True, exist_ok=True)
+        output_dir = beds_dir()
         
         # gerar conteúdo do arquivo .bed
         bed_content = generate_bed_content(request.params, request.mode)

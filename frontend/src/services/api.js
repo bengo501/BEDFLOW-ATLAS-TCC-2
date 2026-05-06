@@ -148,10 +148,13 @@ export const getSystemStatus = async () => {
 export const buildGeneratedFileUrl = (relativePath) => {
   if (!relativePath) return null;
   const normalized = String(relativePath).replace(/\\/g, '/').replace(/^\/+/, '');
-  const withoutGenerated = normalized.startsWith('generated/')
-    ? normalized.slice('generated/'.length)
-    : normalized;
-  return `${getApiBase()}/files/${withoutGenerated}`;
+  if (normalized.startsWith('local_data/')) {
+    return `${getApiBase()}/files/${normalized.slice('local_data/'.length)}`;
+  }
+  if (normalized.startsWith('generated/')) {
+    return `${getApiBase()}/generated/${normalized.slice('generated/'.length)}`;
+  }
+  return `${getApiBase()}/files/${normalized}`;
 };
 
 // endpoint consolidado do dashboard com metricas e listas recentes

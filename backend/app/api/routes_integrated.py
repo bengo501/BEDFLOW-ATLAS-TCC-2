@@ -517,8 +517,10 @@ async def _create_openfoam_case(json_file: str, blend_file: str, job: Job, jobs_
             )
             return None
         
-        # diretorio de saida (alinhar com openfoam_service e documentacao)
-        output_root = project_root / "generated" / "cfd"
+        from bedflow_local_paths import simulations_dir
+
+        # diretorio de saida (alinhar com openfoam_service e local_data)
+        output_root = simulations_dir()
         output_root.mkdir(parents=True, exist_ok=True)
         
         # script de setup

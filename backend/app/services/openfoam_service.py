@@ -7,6 +7,8 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional
 
+from bedflow_local_paths import resolve_existing_artifact, simulations_dir
+
 from backend.app.api.models import JobStatus
 
 class OpenFOAMService:
@@ -16,8 +18,7 @@ class OpenFOAMService:
         self.project_root = Path(__file__).parent.parent.parent.parent
         self.scripts_dir = self.project_root / "scripts" / "openfoam_scripts"
         self.setup_script = self.scripts_dir / "setup_openfoam_case.py"
-        self.output_dir = self.project_root / "generated" / "cfd"
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.output_dir = simulations_dir()
     
     def check_availability(self) -> bool:
         """verifica se openfoam está disponível"""
@@ -60,7 +61,15 @@ class OpenFOAMService:
             # preparar caminhos
             json_path = self.project_root / json_file
             blend_path = self.project_root / blend_file
-            
+            if not json_path.exists():
+                alt = resolve_existing_artifact(str(json_file).replace("\\", "/").lstrip("/"))
+                if alt and alt.is_file():
+                    json_path = alt
+            if not blend_path.exists():
+                altb = resolve_existing_artifact(str(blend_file).replace("\\", "/").lstrip("/"))
+                if altb and altb.is_file():
+                    blend_path = altb
+
             if not json_path.exists():
                 raise FileNotFoundError(f"arquivo json não encontrado: {json_file}")
             

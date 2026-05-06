@@ -1,7 +1,16 @@
-# abstrai listagens sobre a pasta generated para os endpoints de inventario
+# abstrai listagens sobre local_data (e pastas legadas) para inventario e downloads
 from pathlib import Path
 from typing import List
 from datetime import datetime
+
+from bedflow_local_paths import (
+    beds_dir,
+    iter_search_roots_for_beds,
+    iter_search_roots_for_models_3d,
+    iter_search_roots_for_simulations,
+    models_3d_dir,
+    simulations_dir,
+)
 
 from backend.app.api.models import FileInfo
 
@@ -11,81 +20,109 @@ class FileManager:
     def __init__(self):
         # sobe quatro niveis de utils ate à pasta do repositorio
         self.project_root = Path(__file__).parent.parent.parent.parent
-        self.output_dir = self.project_root / "generated"
         self.dsl_dir = self.project_root / "dsl"
 
     def list_files(self, directory: str, extensions: List[str]) -> List[FileInfo]:
-        # ponto significa usar diretamente generated sem subpasta extra
+        roots: List[Path] = []
         if directory == ".":
-            base_dir = self.output_dir
+            roots = iter_search_roots_for_beds()
+        elif directory == "models":
+            roots = iter_search_roots_for_models_3d()
         else:
-            base_dir = self.output_dir / directory
+            roots = [self.project_root / "generated" / directory]
+            roots = [p for p in roots if p.exists()]
 
-        if not base_dir.exists():
+        if not roots:
             return []
 
-        files = []
+        files: List[FileInfo] = []
+        seen: set[str] = set()
 
-        # rglob visita arvore completa a partir de base dir
-        for file_path in base_dir.rglob("*"):
-            if file_path.is_file():
-                # filtro por extensao vazio aceita tudo
+        for base_dir in roots:
+            for file_path in base_dir.rglob("*"):
+                if not file_path.is_file():
+                    continue
                 if extensions and file_path.suffix not in extensions:
                     continue
-
+                key = str(file_path.resolve())
+                if key in seen:
+                    continue
+                seen.add(key)
                 stat = file_path.stat()
+                files.append(
+                    FileInfo(
+                        filename=file_path.name,
+                        path=str(file_path.relative_to(self.project_root)),
+                        size=stat.st_size,
+                        created_at=datetime.fromtimestamp(stat.st_ctime),
+                        file_type=file_path.suffix[1:],
+                    )
+                )
 
-                files.append(FileInfo(
-                    filename=file_path.name,
-                    path=str(file_path.relative_to(self.project_root)),
-                    size=stat.st_size,
-                    created_at=datetime.fromtimestamp(stat.st_ctime),
-                    file_type=file_path.suffix[1:]
-                ))
-
-        # mais recente primeiro ajuda o frontend a mostrar topo util
         files.sort(key=lambda x: x.created_at, reverse=True)
-
         return files
 
     def list_directories(self, directory: str) -> List[FileInfo]:
-        # cada pasta vira um FileInfo sintetico com size somado recursivo
-        base_dir = self.output_dir / directory
+        if directory != "cfd":
+            base_dir = self.project_root / "generated" / directory
+            if not base_dir.exists():
+                return []
+            roots = [base_dir]
+        else:
+            roots = iter_search_roots_for_simulations()
 
-        if not base_dir.exists():
-            return []
+        dirs: List[FileInfo] = []
+        seen_names: set[str] = set()
 
-        dirs = []
-
-        for dir_path in base_dir.iterdir():
-            if dir_path.is_dir():
+        for base_dir in roots:
+            if not base_dir.exists():
+                continue
+            for dir_path in base_dir.iterdir():
+                if not dir_path.is_dir():
+                    continue
+                name = dir_path.name
+                if name in seen_names:
+                    continue
+                seen_names.add(name)
                 stat = dir_path.stat()
-
-                # soma bytes de todos os ficheiros internos recursivamente
-                total_size = sum(f.stat().st_size for f in dir_path.rglob("*") if f.is_file())
-
-                dirs.append(FileInfo(
-                    filename=dir_path.name,
-                    path=str(dir_path.relative_to(self.project_root)),
-                    size=total_size,
-                    created_at=datetime.fromtimestamp(stat.st_ctime),
-                    file_type="directory"
-                ))
+                total_size = sum(
+                    f.stat().st_size for f in dir_path.rglob("*") if f.is_file()
+                )
+                dirs.append(
+                    FileInfo(
+                        filename=name,
+                        path=str(dir_path.relative_to(self.project_root)),
+                        size=total_size,
+                        created_at=datetime.fromtimestamp(stat.st_ctime),
+                        file_type="directory",
+                    )
+                )
 
         dirs.sort(key=lambda x: x.created_at, reverse=True)
-
         return dirs
 
     def get_file_path(self, file_type: str, filename: str) -> Path:
-        # mapeamento alinha com convencoes do pipeline de pastas
-        type_dirs = {
-            "bed": self.output_dir / "configs",
-            "json": self.output_dir / "configs",
-            "blend": self.output_dir / "3d" / "output",
-            "stl": self.output_dir / "cfd",
-            "simulation": self.output_dir / "cfd"
-        }
-
-        base_dir = type_dirs.get(file_type, self.output_dir)
-
-        return base_dir / filename
+        if file_type == "bed":
+            for base in iter_search_roots_for_beds():
+                p = base / filename
+                if p.is_file():
+                    return p
+            return beds_dir() / filename
+        if file_type == "json":
+            for base in iter_search_roots_for_beds():
+                p = base / filename
+                if p.is_file():
+                    return p
+            return beds_dir() / filename
+        if file_type in ("blend", "stl"):
+            for base in iter_search_roots_for_models_3d():
+                p = base / filename
+                if p.is_file():
+                    return p
+            return models_3d_dir() / filename
+        if file_type == "simulation":
+            leg = self.project_root / "generated" / "cfd" / filename
+            if leg.is_dir() or leg.is_file():
+                return leg
+            return simulations_dir() / filename
+        return self.project_root / filename

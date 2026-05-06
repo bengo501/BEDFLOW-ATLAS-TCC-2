@@ -15,8 +15,8 @@ from backend.app.database import crud, models, schemas
 
 class ResultsService:
     def __init__(self) -> None:
-        # sobe tres niveis ate backend que contem generated ou caminhos relativos gravados no sql
-        self.project_root = Path(__file__).parent.parent.parent
+        # quatro niveis: services -> app -> backend -> raiz do repositorio
+        self.project_root = Path(__file__).resolve().parent.parent.parent.parent
 
     def ingest_simulation_results(
         self,

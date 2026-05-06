@@ -6,30 +6,36 @@ from typing import List, Dict, Optional
 import os
 from datetime import datetime
 
+from bedflow_local_paths import iter_search_roots_for_simulations, resolve_simulation_case_dir, simulations_dir
+
 router = APIRouter()
 
 
 @router.get("/casos/list")
 async def listar_casos():
     """
-    listar todos os casos cfd existentes no diretório generated/cfd/
+    listar casos cfd em local_data/simulations e pasta legada generated/cfd
     """
     try:
-        project_root = Path(__file__).parent.parent.parent.parent
-        cfd_dir = project_root / "generated" / "cfd"
-        
-        if not cfd_dir.exists():
+        roots = iter_search_roots_for_simulations()
+        if not roots:
             return {
                 "casos": [],
                 "count": 0,
-                "message": "diretório cfd não existe ainda"
+                "message": "diretório cfd não existe ainda",
             }
-        
         casos = []
-        
-        # percorrer todos os diretórios em generated/cfd/
-        for item in cfd_dir.iterdir():
-            if item.is_dir():
+        seen = set()
+        for cfd_dir in roots:
+            if not cfd_dir.exists():
+                continue
+            for item in cfd_dir.iterdir():
+                if not item.is_dir():
+                    continue
+                key = item.name
+                if key in seen:
+                    continue
+                seen.add(key)
                 caso_info = analisar_caso(item)
                 if caso_info:
                     casos.append(caso_info)
@@ -40,7 +46,8 @@ async def listar_casos():
         return {
             "casos": casos,
             "count": len(casos),
-            "directory": str(cfd_dir)
+            "directory": str(simulations_dir()),
+            "legacy_directories": [str(p) for p in roots],
         }
         
     except Exception as e:
@@ -149,10 +156,8 @@ async def obter_detalhes_caso(nome_caso: str):
     obter detalhes completos de um caso específico
     """
     try:
-        project_root = Path(__file__).parent.parent.parent.parent
-        caso_dir = project_root / "generated" / "cfd" / nome_caso
-        
-        if not caso_dir.exists():
+        caso_dir = resolve_simulation_case_dir(nome_caso)
+        if caso_dir is None:
             raise HTTPException(status_code=404, detail="caso não encontrado")
         
         # informações básicas
@@ -211,10 +216,8 @@ async def deletar_caso(nome_caso: str):
     deletar um caso cfd (cuidado! operação irreversível)
     """
     try:
-        project_root = Path(__file__).parent.parent.parent.parent
-        caso_dir = project_root / "generated" / "cfd" / nome_caso
-        
-        if not caso_dir.exists():
+        caso_dir = resolve_simulation_case_dir(nome_caso)
+        if caso_dir is None:
             raise HTTPException(status_code=404, detail="caso não encontrado")
         
         # remover diretório recursivamente
@@ -238,10 +241,8 @@ async def executar_caso_existente(nome_caso: str):
     executar um caso cfd que já foi configurado mas não executado
     """
     try:
-        project_root = Path(__file__).parent.parent.parent.parent
-        caso_dir = project_root / "generated" / "cfd" / nome_caso
-        
-        if not caso_dir.exists():
+        caso_dir = resolve_simulation_case_dir(nome_caso)
+        if caso_dir is None:
             raise HTTPException(status_code=404, detail="caso não encontrado")
         
         # verificar se Allrun existe

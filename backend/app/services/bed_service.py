@@ -7,14 +7,16 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, Optional
 
+from bedflow_local_paths import beds_dir
+
 class BedService:
     def __init__(self):
         # quatro niveis acima leva a raiz do repo onde existem dsl e output
         self.project_root = Path(__file__).parent.parent.parent.parent
         self.dsl_dir = self.project_root / "dsl"
         self.compiler_script = self.dsl_dir / "compiler" / "bed_compiler_antlr_standalone.py"
-        # ficheiros bed brutos vivem em output antes de copias para generated
-        self.output_dir = self.project_root / "output"
+        # ficheiros .bed e .bed.json canonicos em local_data/beds
+        self.output_dir = beds_dir()
 
     def check_availability(self) -> bool:
         # true se o script python do compilador existir no disco
@@ -29,7 +31,7 @@ class BedService:
         # o blender le o arquivo ja mesclado quando o backend chama generate model
         jp = Path(json_file)
         if not jp.is_file():
-            alt = self.output_dir / jp.name
+            alt = beds_dir() / jp.name
             if alt.is_file():
                 jp = alt
             else:

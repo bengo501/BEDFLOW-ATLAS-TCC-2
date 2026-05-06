@@ -9,6 +9,8 @@ import json
 import uuid
 from datetime import datetime
 
+from bedflow_local_paths import find_wizard_json_and_blend, simulations_dir
+
 router = APIRouter()
 
 # armazenar status das simulacoes em memoria
@@ -90,7 +92,7 @@ async def create_cfd_case(request: CFDRequest, background_tasks: BackgroundTasks
         if request.output_dir:
             output_dir = project_root / request.output_dir
         else:
-            output_dir = project_root / "generated" / "cfd" / f"sim_{simulation_id}"
+            output_dir = simulations_dir() / f"sim_{simulation_id}"
         
         # criar entrada de status
         simulations_status[simulation_id] = {
@@ -280,16 +282,15 @@ async def run_cfd_from_wizard(
 
         file_base = body.fileName.replace(".bed", "")
 
-        bed_json = project_root / "generated" / "configs" / f"{file_base}.bed.json"
-        blend_file = project_root / "generated" / "3d" / "output" / f"{file_base}.blend"
+        bed_json, blend_file = find_wizard_json_and_blend(file_base)
 
-        if not bed_json.exists():
+        if bed_json is None or not bed_json.is_file():
             raise HTTPException(
                 status_code=404,
                 detail="arquivo json nao encontrado. compile o .bed primeiro",
             )
 
-        if not blend_file.exists():
+        if blend_file is None or not blend_file.is_file():
             raise HTTPException(
                 status_code=404,
                 detail="modelo 3d nao encontrado. gere o modelo no blender primeiro",
@@ -328,7 +329,7 @@ async def create_case_only(
         if not json_path.exists():
             raise HTTPException(status_code=404, detail="arquivo json não encontrado")
 
-        case_dir = project_root / "generated" / "cfd" / body.case_name
+        case_dir = simulations_dir() / body.case_name
         case_dir.mkdir(parents=True, exist_ok=True)
 
         await _setup_cfd_case(blend_path, json_path, case_dir)
@@ -361,7 +362,7 @@ async def create_case_from_json_only(
         if not json_path.exists():
             raise HTTPException(status_code=404, detail="arquivo json não encontrado")
 
-        case_dir = project_root / "generated" / "cfd" / body.case_name
+        case_dir = simulations_dir() / body.case_name
         case_dir.mkdir(parents=True, exist_ok=True)
 
         await _setup_cfd_case_from_json(json_path, case_dir)

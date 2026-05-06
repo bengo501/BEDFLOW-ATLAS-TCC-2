@@ -11,6 +11,8 @@ project_root = Path(__file__).parent.parent.parent
 # insere raiz no sys path para imports absolutos estilo backend app
 sys.path.insert(0, str(project_root))
 
+from bedflow_local_paths import ensure_local_data_layout, legacy_generated_root, local_data_root
+
 from backend.app.api import routes
 from backend.app.database.connection import DatabaseConnection
 from backend.app.database.seed_demo import seed_demo_data_if_needed
@@ -34,12 +36,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# pasta generated guarda artefactos grandes servidos tambem em url files
-output_dir = project_root / "generated"
-output_dir.mkdir(exist_ok=True)
+# local_data e o sitio canonico; generated mantido para ficheiros antigos
+ensure_local_data_layout()
+_local = local_data_root()
+_legacy_gen = legacy_generated_root()
 
-# static files mapeia url files para disco sem autenticacao neste prototipo
-app.mount("/files", StaticFiles(directory=str(output_dir)), name="files")
+# /files -> local_data (ex.: /files/beds/foo.bed.json)
+app.mount("/files", StaticFiles(directory=str(_local)), name="files")
+# /generated -> pasta legada ainda referenciada por caminhos antigos
+app.mount("/generated", StaticFiles(directory=str(_legacy_gen)), name="generated_static")
 
 # router principal cobre bed compile modelo jobs e listagens
 app.include_router(routes.router, prefix="/api")

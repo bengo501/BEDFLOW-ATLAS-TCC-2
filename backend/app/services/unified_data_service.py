@@ -16,10 +16,12 @@ class UnifiedDataService:
         if not relative_path:
             return None
         normalized = str(relative_path).replace("\\", "/").lstrip("/")
+        if normalized.startswith("local_data/"):
+            return f"/files/{normalized[len('local_data/'):]}"
         if normalized.startswith("generated/"):
-            normalized = normalized[len("generated/"):]
+            return f"/generated/{normalized[len('generated/'):]}"
         if normalized.startswith("3d/") or normalized.startswith("models/"):
-            return f"/files/{normalized}"
+            return f"/generated/{normalized}"
         return None
 
     def _bed_to_model_3d(self, bed: models.Bed) -> schemas.Model3DResponse:
