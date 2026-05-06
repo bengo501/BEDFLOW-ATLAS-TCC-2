@@ -359,7 +359,7 @@ def execute_quick_test_noninteractive(
             packing_effective=packing_final,
             bed_diameter=bd,
         )
-        _open_blender_after(wizard, console, post_key=post_key, stl=stl, blend=None)
+        _open_blender_after(wizard, console=console, post_key=post_key, stl=stl, blend=None)
     else:
         fmt = export_formats_for_blender(wizard.params.get("export") or {})
         with progress_phase(console, "executar blender"):
@@ -378,7 +378,7 @@ def execute_quick_test_noninteractive(
             backend_effective="blender",
             packing_effective=packing_final,
         )
-        _open_blender_after(wizard, console, post_key=post_key, stl=None, blend=blend)
+        _open_blender_after(wizard, console=console, post_key=post_key, stl=None, blend=blend)
 
     return 0, backend_final, packing_final
 
@@ -798,7 +798,7 @@ def run(wizard: "BedWizard") -> None:
                 packing_effective=packing,
                 bed_diameter=bd,
             )
-            _open_blender_after(wizard, console, post_key=po_key, stl=stl, blend=None)
+            _open_blender_after(wizard, console=console, post_key=po_key, stl=stl, blend=None)
         elif ok:
             ui.ok("stl gerado")
         else:
@@ -819,7 +819,7 @@ def run(wizard: "BedWizard") -> None:
                 backend_effective="blender",
                 packing_effective=packing,
             )
-            _open_blender_after(wizard, console, post_key=po_key, stl=None, blend=blend)
+            _open_blender_after(wizard, console=console, post_key=po_key, stl=None, blend=blend)
         else:
             render_error_panel(console, "falha no blender — ver stderr na consola acima")
 

@@ -2,7 +2,7 @@
   "bed": {
     "diameter": 0.05,
     "height": 0.1,
-    "wall_thickness": 0.0020000000000000018,
+    "wall_thickness": 0.002,
     "clearance": 0.01,
     "material": "steel",
     "roughness": 0.0
@@ -16,8 +16,8 @@
   },
   "particles": {
     "kind": "sphere",
-    "diameter": 0.0015,
-    "count": 80,
+    "diameter": 0.005,
+    "count": 100,
     "target_porosity": 0.4,
     "density": 2500.0,
     "mass": 0.0,
@@ -26,10 +26,10 @@
     "rolling_friction": 0.1,
     "linear_damping": 0.1,
     "angular_damping": 0.1,
-    "seed": 1
+    "seed": 42
   },
   "packing": {
-    "method": "hexagonal_3d",
+    "method": "rigid_body",
     "gravity": -9.81,
     "substeps": 10,
     "iterations": 10,
@@ -40,8 +40,8 @@
   },
   "export": {
     "formats": [
-      "blend",
-      "stl"
+      "stl_binary",
+      "obj"
     ],
     "units": "m",
     "scale": 1.0,
@@ -60,10 +60,8 @@
     "write_fields": false
   },
   "_metadata": {
-    "hash": "d02e981f",
+    "hash": "bef627b8",
     "compiler": "bed_compiler_antlr_standalone",
-    "input_file": "C:\\Users\\joxto\\Downloads\\BEDFLOW-ATLAS-TCC-2\\_test_hex.bed"
-  },
-  "packing_mode": "hexagonal_3d",
-  "generation_backend": "pure_python"
+    "input_file": "C:\\Users\\joxto\\Downloads\\BEDFLOW-ATLAS-TCC-2\\meu_leito.bed"
+  }
 }

@@ -1,0 +1,32 @@
+{
+  "n_spheres": 0,
+  "r_ext": 0.025,
+  "r_int": 0.023,
+  "height": 0.1,
+  "packing_method": "hexagonal_3d",
+  "validation": {
+    "ok": true,
+    "n_spheres": 0,
+    "pair_violations": 0,
+    "domain_violations": 0,
+    "messages": []
+  },
+  "porosity_estimate": 1.0,
+  "generation": {
+    "n_placed": 0,
+    "n_target": 80,
+    "elapsed_sec": 8.799997885944322e-06,
+    "stopped_reason": "dominio_vazio",
+    "step_x": 0.0025
+  },
+  "generation_wall_time_sec": 1.170000177808106e-05,
+  "gap_convention": "center_distance >= r1+r2+gap",
+  "n_spheres_requested": 80,
+  "n_spheres_placed": 0,
+  "sphere_centers_preview": [],
+  "sphere_centers_histogram": [],
+  "pair_violations": 0,
+  "domain_violations": 0,
+  "placement_attempts_total": null,
+  "placement_rejections_approx": null
+}

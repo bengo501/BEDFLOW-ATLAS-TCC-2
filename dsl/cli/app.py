@@ -52,10 +52,51 @@ def _run_interactive_menu() -> None:
     BedWizard().run()
 
 
+def _print_cli_flags_help() -> None:
+    """mostra --help do typer e exemplos de flags sem encerrar o interpretador."""
+    argv_bak = sys.argv[:]
+    prog = argv_bak[0] if argv_bak else "bed_wizard.py"
+    try:
+        sys.argv = [prog, "--help"]
+        try:
+            app()
+        except SystemExit as se:
+            if se.code not in (0, None):
+                raise
+    finally:
+        sys.argv = argv_bak
+    typer.echo()
+    typer.secho("modo legado (mesmas flags que antes)", fg=typer.colors.CYAN)
+    typer.echo(f'  {prog} --load-json params.json --output-bed saida.bed')
+    typer.echo(f'  {prog} --template default --merge-json extra.json --output-bed out.bed')
+    typer.echo()
+    typer.secho("subcomandos typer (recomendado)", fg=typer.colors.CYAN)
+    typer.echo(f"  {prog} generate --help")
+    typer.echo(f"  {prog} test -i caso.bed --backend pure_python")
+    typer.echo(f"  {prog} compile modelo.bed")
+    typer.echo()
+
+
+def _choose_startup_mode() -> bool:
+    """sem argumentos pergunta interativo vs linha de comandos. retorna false se so mostrou ajuda."""
+    typer.echo()
+    typer.echo(" bed wizard — como pretende usar?")
+    typer.echo("  [1] menu interativo (passo a passo no terminal)")
+    typer.echo("  [2] linha de comandos (subcomandos e flags — ver ajuda e exemplos)")
+    typer.echo()
+    choice = typer.prompt("opcao (1 ou 2)", default="1").strip().lower()
+    if choice in ("2", "cli", "flags", "f", "linha", "comandos"):
+        _print_cli_flags_help()
+        return False
+    _run_interactive_menu()
+    return True
+
+
 @app.callback(invoke_without_command=True)
 def main_callback(ctx: typer.Context) -> None:
     if ctx.invoked_subcommand is None:
-        _run_interactive_menu()
+        if not _choose_startup_mode():
+            raise typer.Exit(0)
 
 
 @app.command("interactive")
@@ -287,10 +328,10 @@ def cmd_pipeline(
 
 @app.command("docs")
 def cmd_docs() -> None:
-    """abrir documentacao html no navegador"""
+    """mostrar documentacao no terminal (texto extraido do html)"""
     from bed_wizard import BedWizard
 
-    BedWizard().show_documentation()
+    BedWizard().show_documentation(standalone=True)
 
 
 @app.command("help-sections")
@@ -324,7 +365,7 @@ def cmd_templates(
 def dispatch_main() -> int:
     argv = sys.argv[1:]
     if not argv:
-        _run_interactive_menu()
+        _choose_startup_mode()
         return 0
     if any(a in _LEGACY_FLAGS for a in argv):
         from bed_wizard import BedWizard

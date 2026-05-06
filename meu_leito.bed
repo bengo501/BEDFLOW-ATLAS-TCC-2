@@ -1,0 +1,68 @@
+// template padrao para leito empacotado
+// edite os valores conforme necessario
+
+bed {
+    diameter = 0.05 m;           // diametro do leito
+    height = 0.1 m;              // altura do leito
+    wall_thickness = 0.002 m;    // espessura da parede
+    clearance = 0.01 m;          // folga superior
+    material = "steel";          // material da parede
+    roughness = 0.0 m;           // rugosidade (opcional)
+}
+
+lids {
+    top_type = "flat";           // tipo da tampa superior
+    bottom_type = "flat";        // tipo da tampa inferior
+    top_thickness = 0.003 m;     // espessura tampa superior
+    bottom_thickness = 0.003 m;  // espessura tampa inferior
+    seal_clearance = 0.001 m;    // folga do selo (opcional)
+}
+
+particles {
+    kind = "sphere";             // tipo de particula
+    diameter = 0.005 m;          // diametro das particulas
+    count = 100;                 // numero de particulas
+    target_porosity = 0.4;       // porosidade alvo (opcional)
+    density = 2500.0 kg/m3;      // densidade do material
+    mass = 0.0 g;                // massa das particulas (opcional)
+    restitution = 0.3;           // coeficiente de restituicao (opcional)
+    friction = 0.5;              // coeficiente de atrito (opcional)
+    rolling_friction = 0.1;      // atrito de rolamento (opcional)
+    linear_damping = 0.1;        // amortecimento linear (opcional)
+    angular_damping = 0.1;       // amortecimento angular (opcional)
+    seed = 42;                   // seed para reproducibilidade (opcional)
+}
+
+packing {
+    method = "rigid_body";       // metodo de empacotamento
+    gravity = -9.81 m/s2;        // gravidade
+    substeps = 10;               // sub-passos de simulacao (opcional)
+    iterations = 10;             // iteracoes (opcional)
+    damping = 0.1;               // amortecimento (opcional)
+    rest_velocity = 0.01 m/s;    // velocidade de repouso (opcional)
+    max_time = 5.0 s;            // tempo maximo (opcional)
+    collision_margin = 0.001 m;  // margem de colisao (opcional)
+}
+
+export {
+    formats = ["stl_binary", "obj"];  // formatos de exportacao
+    units = "m";                      // unidades de saida (opcional)
+    scale = 1.0;                      // escala (opcional)
+    wall_mode = "surface";            // modo da parede
+    fluid_mode = "none";              // modo do fluido
+    manifold_check = true;            // verificar manifold (opcional)
+    merge_distance = 0.001 m;         // distancia de fusao (opcional)
+}
+
+// secao CFD (opcional - descomente se necessario)
+/*
+cfd {
+    regime = "laminar";               // regime CFD
+    inlet_velocity = 0.1 m/s;         // velocidade de entrada (opcional)
+    fluid_density = 1.225 kg/m3;      // densidade do fluido (opcional)
+    fluid_viscosity = 1.8e-5 Pa.s;   // viscosidade do fluido (opcional)
+    max_iterations = 1000;            // iteracoes maximas (opcional)
+    convergence_criteria = 1e-6;      // criterio de convergencia (opcional)
+    write_fields = false;             // escrever campos (opcional)
+}
+*/

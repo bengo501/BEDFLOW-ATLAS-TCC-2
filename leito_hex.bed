@@ -1,10 +1,10 @@
 // arquivo .bed gerado pelo wizard
 
 bed {
-    diameter = 0.05 m;
-    height = 0.1 m;
-    wall_thickness = 0.0020000000000000018 m;
-    clearance = 0.01 m;
+    diameter = 0.06 m;
+    height = 0.12 m;
+    wall_thickness = 0.002 m;
+    clearance = 0.008 m;
     material = "steel";
 }
 
@@ -18,8 +18,8 @@ lids {
 
 particles {
     kind = "sphere";
-    diameter = 0.0015 m;
-    count = 80;
+    diameter = 0.002 m;
+    count = 72;
     target_porosity = 0.4;
     density = 2500.0 kg/m3;
     friction = 0.5;
