@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import JSZip from 'jszip';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   listReports,
   getReport,
@@ -11,11 +11,11 @@ import {
   reportsResultsForSimulation,
   addReportAttachment,
   removeReportAttachment,
-} from '../services/api';
-import BackendConnectionError from './BackendConnectionError';
-import PaginationControls from './PaginationControls';
-import ThemeIcon from './ThemeIcon';
-import './ReportsPage.css';
+} from '../../services/api';
+import BackendConnectionError from '../../components/common/BackendConnectionError';
+import PaginationControls from '../../components/common/PaginationControls';
+import ThemeIcon from '../../components/common/ThemeIcon';
+import '../../styles/ReportsPage.css';
 
 function isConnectionError(err) {
   if (!err) return false;

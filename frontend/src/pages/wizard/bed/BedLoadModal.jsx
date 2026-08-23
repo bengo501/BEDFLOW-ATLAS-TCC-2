@@ -1,12 +1,12 @@
 import { useReducer, useCallback, useEffect } from 'react';
-import { useLanguage } from '../../context/LanguageContext';
+import { useLanguage } from '../../../context/LanguageContext';
 import {
   bedLoadReducer,
   initialBedLoadState,
   buildOverridesPayload,
   hubModeToDefaultRunType,
 } from './bedLoadReducer';
-import { getBedTemplateDefault, resolveMeshIdForRelativePath } from '../../services/api';
+import { getBedTemplateDefault, resolveMeshIdForRelativePath } from '../../../services/api';
 import {
   parseBedFile,
   compileBedWithOverrides,
@@ -16,7 +16,7 @@ import {
 import ParseSummaryCards from './ParseSummaryCards';
 import OverrideDiffTable from './OverrideDiffTable';
 import BedLoadConfigForm from './BedLoadConfigForm';
-import '../../styles/BedLoadModal.css';
+import '../../../styles/BedLoadModal.css';
 
 const MAX_BYTES = 2 * 1024 * 1024;
 

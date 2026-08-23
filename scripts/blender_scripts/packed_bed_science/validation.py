@@ -103,7 +103,7 @@ def validate_configuration(
             report["messages"].append(f"dominio i={i} {why}")
 
     # fase 2 checar todos os pares i j com j maior que i
-    # complexidade o de n ao quadrado aceitavel para n modesto de tcc
+    # complexidade o de n ao quadrado aceitavel para n modesto
     for i in range(n):
         for j in range(i + 1, n):
             if check_collision_pair(centers[i], radii[i], centers[j], radii[j], gap):

@@ -8,7 +8,7 @@ from pathlib import Path
 import time
 
 class CompleteSetup:
-    """classe para configuracao completa do projeto cfd-pipeline-tcc"""
+    """classe para configuracao completa do projeto bedflow-atlas"""
     
     def __init__(self):
         self.system = platform.system()
@@ -26,7 +26,7 @@ class CompleteSetup:
     def print_header(self):
         """imprime cabecalho"""
         print("="*70)
-        print("  CONFIGURADOR COMPLETO - CFD-PIPELINE-TCC")
+        print("  CONFIGURADOR COMPLETO - BEDFLOW-ATLAS")
         print("="*70)
         print(f"sistema operacional: {self.system}")
         print(f"diretorio do projeto: {self.project_root}")
@@ -219,11 +219,11 @@ class CompleteSetup:
         print("\n[componente 6/6] arquivo de configuracao")
         print("-" * 50)
         
-        config_content = f"""# configuracao do projeto cfd-pipeline-tcc
+        config_content = f"""# configuracao do projeto bedflow-atlas
 # arquivo gerado automaticamente em {time.strftime('%Y-%m-%d %H:%M:%S')}
 
 [project]
-name = CFD-PIPELINE-TCC
+name = BEDFLOW-ATLAS
 version = 1.0.0
 root = {self.project_root}
 
@@ -431,7 +431,7 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(
-        description='configuracao completa do projeto cfd-pipeline-tcc',
+        description='configuracao completa do projeto bedflow-atlas',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 exemplos:

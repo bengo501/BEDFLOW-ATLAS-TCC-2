@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
-import '../styles/BedPreview3D.css';
+import '../../styles/BedPreview3D.css';
 
 const BedPreview3D = ({ params }) => {
   const mountRef = useRef(null);

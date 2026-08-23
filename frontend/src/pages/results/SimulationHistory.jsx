@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import ThemeIcon from './ThemeIcon';
-import BackendConnectionError from './BackendConnectionError';
+import { useLanguage } from '../../context/LanguageContext';
+import ThemeIcon from '../../components/common/ThemeIcon';
+import BackendConnectionError from '../../components/common/BackendConnectionError';
 import {
   listSimulations,
   listModels3D,
@@ -12,12 +12,12 @@ import {
   buildMeshStreamUrl,
   listViewerMeshes,
   mergeDbModelsWithProjectMeshes,
-} from '../services/api';
-import { useActiveUser } from '../context/UserContext';
-import PaginationControls from './PaginationControls';
-import '../styles/CasosCFD.css';
-import '../styles/MeshViewer3DPage.css';
-import './SimulationHistory.css';
+} from '../../services/api';
+import { useActiveUser } from '../../context/UserContext';
+import PaginationControls from '../../components/common/PaginationControls';
+import '../../styles/CasosCFD.css';
+import '../../styles/MeshViewer3DPage.css';
+import '../../styles/SimulationHistory.css';
 
 function isConnectionError(err) {
   if (!err) return false;

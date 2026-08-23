@@ -1940,24 +1940,6 @@ legend {
   gap: 0.45rem;
 }
 
-.footer-tcc {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.footer-tcc h4 {
-  line-height: 1.35;
-}
-
-.footer-tcc-course {
-  margin: 0;
-  font-size: 0.8rem;
-  line-height: 1.45;
-  opacity: 0.92;
-}
-
-
 .footer-section h4 {
   font-size: 0.82rem;
   font-weight: 600;
@@ -2472,11 +2454,6 @@ legend {
   color: var(--accent);
   font-weight: 700;
   font-size: 0.82rem;
-}
-
-.footer-tcc .academic-year {
-  align-self: flex-start;
-  margin-top: 0.15rem;
 }
 
 .academic-year {

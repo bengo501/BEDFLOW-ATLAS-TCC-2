@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { getDevInfoForTab } from '../config/devTabEndpoints';
-import './DevModePanel.css';
+import { useLanguage } from '../../context/LanguageContext';
+import { getDevInfoForTab } from '../../config/devTabEndpoints';
+import '../../styles/DevModePanel.css';
 
 export default function DevModePanel({ activeTab }) {
   const { language } = useLanguage();

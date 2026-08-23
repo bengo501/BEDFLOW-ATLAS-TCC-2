@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import ThemeIcon from './ThemeIcon';
-import BackendConnectionError from './BackendConnectionError';
-import '../styles/PipelineCompletoFull.css';
-import { postPipelineFullSimulation, getPipelineJob, parseApiError } from '../services/api';
+import { useLanguage } from '../../context/LanguageContext';
+import ThemeIcon from '../../components/common/ThemeIcon';
+import BackendConnectionError from '../../components/common/BackendConnectionError';
+import '../../styles/PipelineCompletoFull.css';
+import { postPipelineFullSimulation, getPipelineJob, parseApiError } from '../../services/api';
 import {
   buildNestedPipelineBody,
   defaultPipelineCompactParams,
   modelingProfileFromBackend,
-} from '../lib/pipelineParams';
+} from '../../lib/pipelineParams';
 
 /**
  * pipeline completo end-to-end com execucao cfd

@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
-import { listJobs, cancelJobs, restartJobs } from '../services/api'
-import ThemeIcon from './ThemeIcon'
-import BackendConnectionError from './BackendConnectionError'
-import { useLanguage } from '../context/LanguageContext'
-import '../styles/MeshViewer3DPage.css'
-import '../styles/CasosCFD.css'
+import { listJobs, cancelJobs, restartJobs } from '../../services/api'
+import ThemeIcon from '../../components/common/ThemeIcon'
+import BackendConnectionError from '../../components/common/BackendConnectionError'
+import { useLanguage } from '../../context/LanguageContext'
+import '../../styles/MeshViewer3DPage.css'
+import '../../styles/CasosCFD.css'
 
 const ACTIVE_JOB_STATUSES = new Set(['queued', 'running'])
 

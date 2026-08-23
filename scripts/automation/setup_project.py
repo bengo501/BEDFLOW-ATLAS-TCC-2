@@ -130,7 +130,7 @@ class ProjectSetup:
         # cria arquivo de configuracao
         print("  Criando arquivo de configuração...")
         
-        config_content = '''# Configuração do Projeto TCC
+        config_content = '''# Configuração do Projeto BEDFLOW-ATLAS
 # Arquivo gerado automaticamente
 
 [BLENDER]

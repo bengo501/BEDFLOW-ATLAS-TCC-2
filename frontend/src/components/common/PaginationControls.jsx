@@ -1,4 +1,4 @@
-import './PaginationControls.css'
+import '../../styles/PaginationControls.css'
 
 function pageWindow(current, total, size = 5) {
   const start = Math.max(1, current - Math.floor(size / 2))

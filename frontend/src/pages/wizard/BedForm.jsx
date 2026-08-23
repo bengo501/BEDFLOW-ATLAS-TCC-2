@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { compileBed, generateModel, parseApiError } from '../services/api'
-import { useTheme } from '../context/ThemeContext'
-import { useLanguage } from '../context/LanguageContext'
-import { useTranslation } from '../i18n/translations'
-import ThemeIcon from './ThemeIcon'
-import BackendConnectionError from './BackendConnectionError'
+import { compileBed, generateModel, parseApiError } from '../../services/api'
+import { useTheme } from '../../context/ThemeContext'
+import { useLanguage } from '../../context/LanguageContext'
+import { useTranslation } from '../../i18n/translations'
+import ThemeIcon from '../../components/common/ThemeIcon'
+import BackendConnectionError from '../../components/common/BackendConnectionError'
 
 function BedForm({ onJobCreated }) {
   const { theme } = useTheme()

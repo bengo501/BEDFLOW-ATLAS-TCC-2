@@ -2,7 +2,7 @@
 """
 atalho na raiz do repositorio: executa o wizard terminal em dsl/bed_wizard.py.
 
-uso (a partir da pasta cfd-pipeline-tcc-2):
+uso (a partir da pasta bedflow-atlas):
   python bed_wizard.py
 
 equivalente:

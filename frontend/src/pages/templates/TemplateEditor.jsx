@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { useLanguage } from '../context/LanguageContext'
-import ThemeIcon from './ThemeIcon'
-import BackendConnectionError from './BackendConnectionError'
-import '../styles/TemplateEditor.css'
+import { useLanguage } from '../../context/LanguageContext'
+import ThemeIcon from '../../components/common/ThemeIcon'
+import BackendConnectionError from '../../components/common/BackendConnectionError'
+import '../../styles/TemplateEditor.css'
 import {
   getBedTemplateDefault,
   saveTemplate,
@@ -10,7 +10,7 @@ import {
   getTemplate,
   deleteTemplate,
   listTemplates,
-} from '../services/api'
+} from '../../services/api'
 
 function IconCopy({ className }) {
   return (

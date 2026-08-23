@@ -436,7 +436,7 @@ class OpenFOAMInstaller:
         print("3. testar: blockMesh --help")
         print("4. executar caso: cd ~/openfoam_cases/pitzDaily && paraview caso.foam")
         print("\npara integrar com o projeto:")
-        print("5. cd /mnt/c/Users/[SEU_USUARIO]/Downloads/CFD-PIPELINE-TCC-1")
+        print("5. cd /mnt/c/Users/[SEU_USUARIO]/Downloads/BEDFLOW-ATLAS")
         print("6. python scripts/openfoam_scripts/setup_openfoam_case.py --help")
 
 def main():

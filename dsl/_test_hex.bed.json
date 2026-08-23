@@ -62,7 +62,7 @@
   "_metadata": {
     "hash": "ecbb42c7",
     "compiler": "bed_compiler_antlr_standalone",
-    "input_file": "C:\\Users\\joxto\\Downloads\\CFD-PIPELINE-TCC-2\\dsl\\_test_hex.bed"
+    "input_file": "C:\\Users\\joxto\\Downloads\\BEDFLOW-ATLAS\\dsl\\_test_hex.bed"
   },
   "packing_mode": "spherical_packing",
   "generation_backend": "pure_python"

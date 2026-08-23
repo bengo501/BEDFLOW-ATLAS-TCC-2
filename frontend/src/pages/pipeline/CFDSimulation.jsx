@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import '../styles/CFDSimulation.css';
-import ThemeIcon from './ThemeIcon';
-import BackendConnectionError from './BackendConnectionError';
+import '../../styles/CFDSimulation.css';
+import ThemeIcon from '../../components/common/ThemeIcon';
+import BackendConnectionError from '../../components/common/BackendConnectionError';
 import {
   getCfdList,
   postCfdRunFromWizard,
   deleteCfdSimulation,
   parseApiError,
-} from '../services/api';
+} from '../../services/api';
 
 const CFDSimulation = ({ bedFileName }) => {
   const [simulations, setSimulations] = useState([]);

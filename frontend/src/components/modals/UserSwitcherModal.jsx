@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { listUsers } from '../services/api';
-import ThemeIcon from './ThemeIcon';
-import './UserSwitcherModal.css';
+import { listUsers } from '../../services/api';
+import ThemeIcon from '../common/ThemeIcon';
+import '../../styles/UserSwitcherModal.css';
 
 function roleLabel(role, pt) {
   const m = {

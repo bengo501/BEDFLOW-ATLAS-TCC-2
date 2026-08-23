@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documentation - CFD Pipeline TCC</title>
+    <title>Documentation - BEDFLOW-ATLAS</title>
     <style>
         * {
             margin: 0;
@@ -388,19 +388,19 @@
                             <td><span class="badge badge-success">implemented</span></td>
                         </tr>
                         <tr>
-                            <td><code>openfoam/</code></td>
+                            <td><code>scripts/openfoam_scripts/</code></td>
                             <td>cfd simulation</td>
-                            <td><span class="badge badge-warning">in progress</span></td>
+                            <td><span class="badge badge-success">implemented</span></td>
                         </tr>
                         <tr>
-                            <td><code>api/</code></td>
+                            <td><code>backend/</code></td>
                             <td>fastapi backend</td>
-                            <td><span class="badge badge-danger">pending</span></td>
+                            <td><span class="badge badge-success">implemented</span></td>
                         </tr>
                         <tr>
                             <td><code>frontend/</code></td>
                             <td>react dashboard</td>
-                            <td><span class="badge badge-danger">pending</span></td>
+                            <td><span class="badge badge-success">implemented</span></td>
                         </tr>
                     </tbody>
                 </table>
@@ -420,8 +420,8 @@
                 <h3>quick install</h3>
                 
                 <h4>1. clone the repository</h4>
-                <pre><code>git clone https://github.com/bengo501/CFD-PIPELINE-TCC-1.git
-cd CFD-PIPELINE-TCC-1</code></pre>
+                <pre><code>git clone https://github.com/bengo501/BEDFLOW-ATLAS.git
+cd BEDFLOW-ATLAS</code></pre>
                 
                 <h4>2. install python dependencies</h4>
                 <pre><code>pip install antlr4-python3-runtime</code></pre>
@@ -613,12 +613,12 @@ packing {
                 </div>
                 
                 <div class="card card-info">
-                    <h4>next steps (in development)</h4>
+                    <h4>full documentation</h4>
                     <ul>
-                        <li>automatic openfoam integration</li>
-                        <li>mesh generation for cfd</li>
-                        <li>running the simulation</li>
-                        <li>results in the web dashboard</li>
+                        <li><a href="../docs/en/README.md">docs/en</a> — english guide</li>
+                        <li><a href="../docs/pt/README.md">docs/pt</a> — guia em português</li>
+                        <li>launcher: <code>EXECUTAR_BEDFLOW-ATLAS.bat</code> (checks requirements)</li>
+                        <li>api: <code>http://127.0.0.1:8000/docs</code> · ui: <code>http://127.0.0.1:5173</code></li>
                     </ul>
                 </div>
             </section>
@@ -629,7 +629,7 @@ packing {
                 <div class="grid">
                     <div class="grid-item">
                         <h4>github repository</h4>
-                        <a href="https://github.com/bengo501/CFD-PIPELINE-TCC-1" class="btn">view code</a>
+                        <a href="https://github.com/bengo501/BEDFLOW-ATLAS" class="btn">view code</a>
                     </div>
                     <div class="grid-item">
                         <h4>detailed docs</h4>
@@ -648,9 +648,9 @@ packing {
         </main>
         
         <footer>
-            <p><strong>CFD pipeline for packed beds</strong></p>
-            <p>capstone project - 2024/2025</p>
-            <p>built with python, antlr, blender, and openfoam</p>
+            <p><strong>bedflow-atlas</strong></p>
+            <p>cfd pipeline for packed beds</p>
+            <p>python, antlr, blender, openfoam, fastapi and react</p>
         </footer>
     </div>
 </body>

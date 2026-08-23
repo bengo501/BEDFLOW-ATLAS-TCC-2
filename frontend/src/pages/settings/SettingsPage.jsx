@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { useTheme } from '../context/ThemeContext';
-import { useAppUi } from '../context/AppUiContext';
-import { getSettings, patchSettings, postAdminDevShutdown, getApiBase } from '../services/api';
-import BackendConnectionError from './BackendConnectionError';
-import ThemeIcon from './ThemeIcon';
-import './SettingsPage.css';
+import { useLanguage } from '../../context/LanguageContext';
+import { useTheme } from '../../context/ThemeContext';
+import { useAppUi } from '../../context/AppUiContext';
+import { getSettings, patchSettings, postAdminDevShutdown, getApiBase } from '../../services/api';
+import BackendConnectionError from '../../components/common/BackendConnectionError';
+import ThemeIcon from '../../components/common/ThemeIcon';
+import '../../styles/SettingsPage.css';
 
 function isConnectionError(err) {
   if (!err) return false;

@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import BedPreview3D from './BedPreview3D';
-import { HelpModal, DocsModal } from './WizardHelpers';
-import ThemeIcon from './ThemeIcon';
-import BackendConnectionError from './BackendConnectionError';
-import { useLanguage } from '../context/LanguageContext';
+import { HelpModal, DocsModal } from '../../components/modals/WizardHelpers';
+import ThemeIcon from '../../components/common/ThemeIcon';
+import BackendConnectionError from '../../components/common/BackendConnectionError';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   getWizardCliInstructions,
   launchWizardCliTerminal,
@@ -12,7 +12,7 @@ import {
   postPipelineFullSimulation,
   getBedTemplateDefault,
   parseApiError,
-} from '../services/api';
+} from '../../services/api';
 import BedLoadModal from './bed/BedLoadModal';
 import {
   ICM_HOLLOW,
@@ -24,10 +24,10 @@ import {
   exportMainLabelKey,
   internalCylinderModeHintKey,
   internalCylinderExportNoteKey,
-} from '../lib/bedInternalCylinderUi';
-import '../styles/BedWizard.css';
-import '../styles/CasosCFD.css';
-import '../styles/TemplateEditor.css';
+} from '../../lib/bedInternalCylinderUi';
+import '../../styles/BedWizard.css';
+import '../../styles/CasosCFD.css';
+import '../../styles/TemplateEditor.css';
 
 const REPO_PLACEHOLDER = '<raiz-do-repositorio>';
 

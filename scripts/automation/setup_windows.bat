@@ -1,9 +1,9 @@
 @echo off
 REM Script de Automação para Windows
-REM Configuração automática do projeto TCC
+REM Configuração automática do projeto BEDFLOW-ATLAS
 
 echo ========================================
-echo    CONFIGURADOR AUTOMATICO - TCC
+echo    CONFIGURADOR AUTOMATICO - BEDFLOW-ATLAS
 echo ========================================
 echo.
 

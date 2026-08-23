@@ -498,7 +498,7 @@ cfd {
     def run_all_tests(self):
         """executa todos os testes"""
         print("="*70)
-        print("  TESTES AUTOMATIZADOS - CFD-PIPELINE-TCC")
+        print("  TESTES AUTOMATIZADOS - BEDFLOW-ATLAS")
         print("="*70)
         print(f"sistema: {self.system}")
         print(f"projeto: {self.project_root}")

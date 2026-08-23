@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import ThemeIcon from './ThemeIcon';
-import '../styles/PipelineCompleto.css';
-import '../styles/PipelineCompletoFull.css';
+import ThemeIcon from '../../components/common/ThemeIcon';
+import '../../styles/PipelineCompleto.css';
+import '../../styles/PipelineCompletoFull.css';
 import {
   getJobStatus,
   postBedWizard,
@@ -9,13 +9,13 @@ import {
   postCfdRunFromWizard,
   getCfdStatus,
   parseApiError,
-} from '../services/api';
+} from '../../services/api';
 import {
   defaultPipelineCompactParams,
   toBedWizardRequest,
   modelingProfileFromBackend,
   validatePipelineGeometryBackend,
-} from '../lib/pipelineParams';
+} from '../../lib/pipelineParams';
 
 /**
  * pipeline completo web (fluxo curto): bed wizard → modelo 3d → cfd opcional

@@ -1,5 +1,5 @@
-import { useLanguage } from '../context/LanguageContext';
-import '../styles/BackendConnectionError.css';
+import { useLanguage } from '../../context/LanguageContext';
+import '../../styles/BackendConnectionError.css';
 
 /**
  * aviso visual único para falha de rede / backend indisponível (mesmo padrão da página casos cfd).

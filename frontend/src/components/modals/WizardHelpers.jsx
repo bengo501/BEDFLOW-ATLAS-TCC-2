@@ -1,10 +1,10 @@
 // componentes auxiliares para o wizard
 import { useState } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { getApiBase } from '../services/api';
-import ThemeIcon from './ThemeIcon';
+import { useLanguage } from '../../context/LanguageContext';
+import { getApiBase } from '../../services/api';
+import ThemeIcon from '../common/ThemeIcon';
 
-const REPO_BASE = 'https://github.com/bengo501/CFD-PIPELINE-TCC-1';
+const REPO_BASE = 'https://github.com/bengo501/BEDFLOW-ATLAS';
 
 export const HelpModal = ({ show, onClose, section, paramHelp }) => {
   if (!show) return null;

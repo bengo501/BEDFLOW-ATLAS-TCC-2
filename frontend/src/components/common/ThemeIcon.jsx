@@ -1,4 +1,4 @@
-import { useTheme } from '../context/ThemeContext';
+import { useTheme } from '../../context/ThemeContext';
 
 /**
  * componente para exibir ícones que mudam conforme o tema e localização

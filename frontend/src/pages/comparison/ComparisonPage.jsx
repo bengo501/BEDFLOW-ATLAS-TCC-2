@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { useLanguage } from '../context/LanguageContext';
-import ThemeIcon from './ThemeIcon';
-import BackendConnectionError from './BackendConnectionError';
-import PaginationControls from './PaginationControls';
-import { listSimulations } from '../services/api';
-import './ComparisonPage.css';
+import { useLanguage } from '../../context/LanguageContext';
+import ThemeIcon from '../../components/common/ThemeIcon';
+import BackendConnectionError from '../../components/common/BackendConnectionError';
+import PaginationControls from '../../components/common/PaginationControls';
+import { listSimulations } from '../../services/api';
+import '../../styles/ComparisonPage.css';
 
 function IconRefresh({ className }) {
   return (

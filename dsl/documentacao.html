@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Documentação - CFD Pipeline TCC</title>
+    <title>Documentação - BEDFLOW-ATLAS</title>
     <style>
         * {
             margin: 0;
@@ -390,19 +390,19 @@
                             <td><span class="badge badge-success">implementado</span></td>
                         </tr>
                         <tr>
-                            <td><code>openfoam/</code></td>
+                            <td><code>scripts/openfoam_scripts/</code></td>
                             <td>simulação cfd</td>
-                            <td><span class="badge badge-warning">em progresso</span></td>
+                            <td><span class="badge badge-success">implementado</span></td>
                         </tr>
                         <tr>
-                            <td><code>api/</code></td>
+                            <td><code>backend/</code></td>
                             <td>backend fastapi</td>
-                            <td><span class="badge badge-danger">pendente</span></td>
+                            <td><span class="badge badge-success">implementado</span></td>
                         </tr>
                         <tr>
                             <td><code>frontend/</code></td>
                             <td>dashboard react</td>
-                            <td><span class="badge badge-danger">pendente</span></td>
+                            <td><span class="badge badge-success">implementado</span></td>
                         </tr>
                     </tbody>
                 </table>
@@ -423,8 +423,8 @@
                 <h3>instalação rápida</h3>
                 
                 <h4>1. clonar repositório</h4>
-                <pre><code>git clone https://github.com/bengo501/CFD-PIPELINE-TCC-1.git
-cd CFD-PIPELINE-TCC-1</code></pre>
+                <pre><code>git clone https://github.com/bengo501/BEDFLOW-ATLAS.git
+cd BEDFLOW-ATLAS</code></pre>
                 
                 <h4>2. instalar dependências python</h4>
                 <pre><code>pip install antlr4-python3-runtime</code></pre>
@@ -619,12 +619,12 @@ packing {
                 </div>
                 
                 <div class="card card-info">
-                    <h4>próximos passos (em desenvolvimento)</h4>
+                    <h4>documentação completa</h4>
                     <ul>
-                        <li>integração automática com openfoam</li>
-                        <li>geração de malha para cfd</li>
-                        <li>execução de simulação</li>
-                        <li>visualização de resultados em dashboard web</li>
+                        <li><a href="../docs/pt/README.md">docs/pt</a> — guia em português</li>
+                        <li><a href="../docs/en/README.md">docs/en</a> — guide in english</li>
+                        <li>launcher: <code>EXECUTAR_BEDFLOW-ATLAS.bat</code> (verifica requisitos)</li>
+                        <li>api: <code>http://127.0.0.1:8000/docs</code> · ui: <code>http://127.0.0.1:5173</code></li>
                     </ul>
                 </div>
             </section>
@@ -636,7 +636,7 @@ packing {
                 <div class="grid">
                     <div class="grid-item">
                         <h4>repositório github</h4>
-                        <a href="https://github.com/bengo501/CFD-PIPELINE-TCC-1" class="btn">ver código</a>
+                        <a href="https://github.com/bengo501/BEDFLOW-ATLAS" class="btn">ver código</a>
                     </div>
                     <div class="grid-item">
                         <h4>documentação detalhada</h4>
@@ -655,9 +655,9 @@ packing {
         </main>
         
         <footer>
-            <p><strong>CFD Pipeline para Leitos Empacotados</strong></p>
-            <p>trabalho de conclusão de curso - 2024/2025</p>
-            <p>desenvolvido com python, antlr, blender e openfoam</p>
+            <p><strong>bedflow-atlas</strong></p>
+            <p>pipeline cfd para leitos empacotados</p>
+            <p>python, antlr, blender, openfoam, fastapi e react</p>
         </footer>
     </div>
 </body>

@@ -149,17 +149,20 @@ docs/documentacao/*.md
 !docs/ORGANIZACAO_DOCUMENTACAO.md
 !docs/RESUMO_ORGANIZACAO.md
 !docs/GUIA_PIPELINE_COMPLETO_CLI.md
+!docs/en/**
+!docs/pt/**
+!docs/assets/**
 
 # arquivos markdown na raiz
 *.md
 !README.md
+!README.pt.md
 !CONTRIBUTING.md
 !LICENSE.md
 !CHANGELOG.md
 !GUIA_EXECUCAO_RAPIDO.md
 
 # excluir pastas específicas do gitignore de md
-!relatorio_tcc/**/*.md
 !sprints/**/*.md
 
 # pastas específicas do projeto (não versionar)
@@ -167,6 +170,5 @@ bibliografia/
 .kanbn/
 .kanbn_boards/
 refs/
-relatorio_tcc/
 sprints/
 

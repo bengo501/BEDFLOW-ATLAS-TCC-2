@@ -1,4 +1,8 @@
-# scripts de automacao - cfd-pipeline-tcc
+# scripts de automacao - bedflow-atlas
+
+documentacao geral: [docs/en](../../docs/en/README.md) · [docs/pt](../../docs/pt/README.md)
+
+o ponto de entrada no windows e `EXECUTAR_BEDFLOW-ATLAS.bat` na raiz (verifica python, pip, wizard, backend, node e instala o que faltar). os atalhos que estavam na raiz (`instalar_dependencias.bat`, `diagnostico_backend.ps1`, `monitor_pipeline.ps1`, `executar_modelo_e_visualizar.bat`) vivem agora so nesta pasta.
 
 esta pasta contem scripts para instalacao e configuracao automatica de todos os componentes do projeto.
 
@@ -338,7 +342,7 @@ se os scripts automaticos falharem, instale manualmente:
 apos instalacao completa:
 
 ```
-CFD-PIPELINE-TCC-1/
+BEDFLOW-ATLAS/
 ├── .config/
 │   └── config.ini                    # configuracao do projeto
 │

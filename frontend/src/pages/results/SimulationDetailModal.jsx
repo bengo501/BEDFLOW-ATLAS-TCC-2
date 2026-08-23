@@ -2,7 +2,7 @@ import {
   formatDurationSeconds,
   getStatusText,
 } from './resultsShared'
-import '../SimulationHistory.css'
+import '../../styles/SimulationHistory.css'
 
 export default function SimulationDetailModal({
   pt,

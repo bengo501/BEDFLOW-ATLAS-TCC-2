@@ -54,8 +54,7 @@ generated/**/*.blend
 **/.env.*.local
 docker/.env
 
-# --- documentacao acessoria e materiais do tcc (nao entram na imagem) ---
-relatorio_tcc
+# --- documentacao acessoria (nao entra na imagem) ---
 sprints
 bibliografia
 refs

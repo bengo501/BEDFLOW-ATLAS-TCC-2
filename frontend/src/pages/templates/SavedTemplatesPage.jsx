@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLanguage } from '../context/LanguageContext';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   listTemplates,
   saveTemplate,
   getTemplate,
   deleteTemplate,
   duplicateTemplate,
-} from '../services/api';
-import BackendConnectionError from './BackendConnectionError';
-import PaginationControls from './PaginationControls';
-import ThemeIcon from './ThemeIcon';
-import './SavedTemplatesPage.css';
+} from '../../services/api';
+import BackendConnectionError from '../../components/common/BackendConnectionError';
+import PaginationControls from '../../components/common/PaginationControls';
+import ThemeIcon from '../../components/common/ThemeIcon';
+import '../../styles/SavedTemplatesPage.css';
 
 function IconRefresh({ className }) {
   return (

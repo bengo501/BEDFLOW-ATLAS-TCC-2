@@ -7,12 +7,12 @@ import {
   parseApiError,
   launchMeshDesktopViewer,
   launchMeshBlenderViewer,
-} from '../services/api';
-import { useLanguage } from '../context/LanguageContext';
-import ThemeIcon from './ThemeIcon';
-import '../styles/MeshViewer3DPage.css';
-import { fitCameraToObject } from '../utils/viewerCamera';
-import { countVertices, loadMeshFromBuffer } from '../utils/meshLoadThree';
+} from '../../services/api';
+import { useLanguage } from '../../context/LanguageContext';
+import ThemeIcon from '../../components/common/ThemeIcon';
+import '../../styles/MeshViewer3DPage.css';
+import { fitCameraToObject } from '../../utils/viewerCamera';
+import { countVertices, loadMeshFromBuffer } from '../../utils/meshLoadThree';
 
 const LS_LAST_MESH = 'bedflow_last_mesh_id';
 

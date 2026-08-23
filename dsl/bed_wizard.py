@@ -43,6 +43,13 @@ if str(_BLENDER_SCRIPTS) not in sys.path:
 _PY_MODEL = _REPO_ROOT / "scripts" / "python_modeling"
 if str(_PY_MODEL) not in sys.path:
     sys.path.insert(0, str(_PY_MODEL))
+# garantir que dsl_dir tenha prioridade sobre a raiz do repo em sys.path. sem
+# isto, "import bed_wizard" (usado em dsl/cli/app.py) pode resolver para o
+# atalho bed_wizard.py da raiz (que nao define BedWizard) quando o wizard e
+# executado a partir da pasta dsl.
+if str(_DSL_DIR) in sys.path:
+    sys.path.remove(str(_DSL_DIR))
+sys.path.insert(0, str(_DSL_DIR))
 from bed_config import normalize_generation_backend
 
 # ignorar aviso e402 imports apos codigo sao intencionais porque o path vem antes
@@ -4636,6 +4643,19 @@ cfd {
             "creationflags": subprocess.CREATE_NEW_CONSOLE,
         }
 
+    def _web_win_persistent_console_popen(
+        self, cmd: List[str], cwd: str
+    ) -> subprocess.Popen:
+        # abre uma consola nova que permanece aberta mesmo depois de o processo
+        # terminar ou falhar (cmd /k), permitindo ler os logs e o erro. espelha
+        # o comportamento do terminal no unix (bash -lc "...; read _").
+        win_cmd = 'cmd /k "' + subprocess.list2cmdline(cmd) + '"'
+        return subprocess.Popen(
+            win_cmd,
+            cwd=cwd,
+            creationflags=subprocess.CREATE_NEW_CONSOLE,
+        )
+
     def _web_kill_processes_on_port(self, port: int) -> None:
         """best effort: liberta porto (uvicorn/vite orfaos ou sessao antiga)."""
         if sys.platform == "win32":
@@ -4830,7 +4850,7 @@ cfd {
         cwd = str(_REPO_ROOT)
         if sys.platform == "win32":
             try:
-                return subprocess.Popen(cmd, cwd=cwd, **self._web_popen_kwargs_new_console_win())
+                return self._web_win_persistent_console_popen(cmd, cwd)
             except OSError:
                 return None
         proc = self._web_unix_terminal_popen(cmd, cwd)
@@ -4849,7 +4869,7 @@ cfd {
         cwd = str(_REPO_ROOT / "frontend")
         if sys.platform == "win32":
             try:
-                return subprocess.Popen([npm, "run", "dev"], cwd=cwd, **self._web_popen_kwargs_new_console_win())
+                return self._web_win_persistent_console_popen(cmd, cwd)
             except OSError:
                 return None
         proc = self._web_unix_terminal_popen(cmd, cwd)
@@ -5046,8 +5066,11 @@ cfd {
 
 def main():
     """entrada unifica typer rich comandos e legado argparse via dispatch main"""
-    if str(_DSL_DIR) not in sys.path:
-        sys.path.insert(0, str(_DSL_DIR))
+    # dsl_dir deve preceder a raiz do repo para "import bed_wizard" resolver
+    # para este modulo (dsl/bed_wizard.py) e nao para o atalho da raiz.
+    if str(_DSL_DIR) in sys.path:
+        sys.path.remove(str(_DSL_DIR))
+    sys.path.insert(0, str(_DSL_DIR))
     from graceful_shutdown import install_graceful_shutdown
     from cli.app import dispatch_main
 

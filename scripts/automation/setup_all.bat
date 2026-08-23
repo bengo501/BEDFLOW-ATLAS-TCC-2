@@ -1,9 +1,9 @@
 @echo off
-REM configuracao automatica completa do projeto cfd-pipeline-tcc
+REM configuracao automatica completa do projeto bedflow-atlas
 REM este script instala todas as dependencias necessarias
 
 echo ====================================================================
-echo   CONFIGURADOR AUTOMATICO COMPLETO - CFD-PIPELINE-TCC
+echo   CONFIGURADOR AUTOMATICO COMPLETO - BEDFLOW-ATLAS
 echo ====================================================================
 echo.
 echo este script ira configurar:

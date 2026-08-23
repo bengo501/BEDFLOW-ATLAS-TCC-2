@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useLanguage } from '../context/LanguageContext';
-import { getProfile, patchProfile } from '../services/api';
-import { useActiveUser } from '../context/UserContext';
-import BackendConnectionError from './BackendConnectionError';
-import ThemeIcon from './ThemeIcon';
-import '../styles/CasosCFD.css';
-import '../styles/MeshViewer3DPage.css';
-import './SimulationHistory.css';
-import './ProfilePage.css';
+import { useLanguage } from '../../context/LanguageContext';
+import { getProfile, patchProfile } from '../../services/api';
+import { useActiveUser } from '../../context/UserContext';
+import BackendConnectionError from '../../components/common/BackendConnectionError';
+import ThemeIcon from '../../components/common/ThemeIcon';
+import '../../styles/CasosCFD.css';
+import '../../styles/MeshViewer3DPage.css';
+import '../../styles/SimulationHistory.css';
+import '../../styles/ProfilePage.css';
 
 function IconRefresh({ className }) {
   return (

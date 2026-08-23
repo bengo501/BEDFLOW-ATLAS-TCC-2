@@ -1,23 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import Dashboard from './components/Dashboard'
-import ComparisonPage from './components/ComparisonPage'
-import BedWizard from './components/BedWizard'
-import CasosCFD from './components/CasosCFD'
-import JobStatus from './components/JobStatus'
-import ResultsSimulationsPage from './components/results/ResultsSimulationsPage'
-import ResultsModels3DPage from './components/results/ResultsModels3DPage'
-import ResultsBedCodePage from './components/results/ResultsBedCodePage'
-import TemplateEditor from './components/TemplateEditor'
-import ProfilePage from './components/ProfilePage'
-import ReportsPage from './components/ReportsPage'
-import DatabasePage from './components/DatabasePage'
-import SavedTemplatesPage from './components/SavedTemplatesPage'
-import SettingsPage from './components/SettingsPage'
-import MeshViewer3DPage from './components/MeshViewer3DPage'
-import DevModePanel from './components/DevModePanel'
-import ThemeIcon from './components/ThemeIcon'
-import { HelpModal, DocsModal, CreditsModal, FooterInfoModal } from './components/WizardHelpers'
-import UserSwitcherModal from './components/UserSwitcherModal'
+import Dashboard from './pages/dashboard/Dashboard'
+import ComparisonPage from './pages/comparison/ComparisonPage'
+import BedWizard from './pages/wizard/BedWizard'
+import CasosCFD from './pages/casos/CasosCFD'
+import JobStatus from './pages/jobs/JobStatus'
+import ResultsSimulationsPage from './pages/results/ResultsSimulationsPage'
+import ResultsModels3DPage from './pages/results/ResultsModels3DPage'
+import ResultsBedCodePage from './pages/results/ResultsBedCodePage'
+import TemplateEditor from './pages/templates/TemplateEditor'
+import ProfilePage from './pages/profile/ProfilePage'
+import ReportsPage from './pages/reports/ReportsPage'
+import DatabasePage from './pages/database/DatabasePage'
+import SavedTemplatesPage from './pages/templates/SavedTemplatesPage'
+import SettingsPage from './pages/settings/SettingsPage'
+import MeshViewer3DPage from './pages/meshViewer/MeshViewer3DPage'
+import DevModePanel from './components/common/DevModePanel'
+import ThemeIcon from './components/common/ThemeIcon'
+import { HelpModal, DocsModal, CreditsModal, FooterInfoModal } from './components/modals/WizardHelpers'
+import UserSwitcherModal from './components/modals/UserSwitcherModal'
 import { getSystemStatus, getSettings } from './services/api'
 import api from './services/api'
 import { useLanguage } from './context/LanguageContext'
@@ -856,14 +856,6 @@ function App() {
                 <img src="/image/logo_lope.png" alt="lope laboratorio" className="academic-logo" />
               </a>
             </div>
-          </div>
-
-          <div className="footer-section footer-tcc">
-            <h4>{language === 'pt' ? 'Trabalho de conclusão de curso' : 'Final project'}</h4>
-            <p className="footer-tcc-course">
-              {language === 'pt' ? 'Ciência da computação' : 'Computer science'}
-            </p>
-            <p className="academic-year">2024/2026</p>
           </div>
 
           <div className="footer-section footer-actions-column">

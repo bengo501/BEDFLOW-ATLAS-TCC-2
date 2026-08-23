@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import '../styles/ModelViewer.css';
-import { fitCameraToObject } from '../utils/viewerCamera';
-import { fetchMeshInfoFromFileUrl, loadMeshFromBuffer } from '../utils/meshLoadThree';
+import '../../styles/ModelViewer.css';
+import { fitCameraToObject } from '../../utils/viewerCamera';
+import { fetchMeshInfoFromFileUrl, loadMeshFromBuffer } from '../../utils/meshLoadThree';
 
 function ModelViewer({ modelPath, meshInfo = null }) {
   const mountRef = useRef(null);

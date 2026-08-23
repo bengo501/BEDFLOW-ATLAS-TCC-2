@@ -1,4 +1,4 @@
-# testes end-to-end (e2e) - cfd-pipeline-tcc
+# testes end-to-end (e2e) - bedflow-atlas
 
 testes automatizados completos do pipeline, desde geracao de leitos ate simulacao openfoam.
 

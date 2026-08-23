@@ -6,15 +6,15 @@ import {
   buildGeneratedFileUrl,
   buildMeshStreamUrl,
 } from '../../services/api'
-import ModelViewer from '../ModelViewer'
-import ThemeIcon from '../ThemeIcon'
-import BackendConnectionError from '../BackendConnectionError'
-import PaginationControls from '../PaginationControls'
+import ModelViewer from './ModelViewer'
+import ThemeIcon from '../../components/common/ThemeIcon'
+import BackendConnectionError from '../../components/common/BackendConnectionError'
+import PaginationControls from '../../components/common/PaginationControls'
 import { useLanguage } from '../../context/LanguageContext'
 import { useActiveUser } from '../../context/UserContext'
 import '../../styles/CasosCFD.css'
 import '../../styles/MeshViewer3DPage.css'
-import '../SimulationHistory.css'
+import '../../styles/SimulationHistory.css'
 import { IconRefresh, formatBytes, isConnectionError } from './resultsShared'
 
 function getModelPreviewPath(model) {

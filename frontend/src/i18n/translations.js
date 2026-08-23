@@ -271,7 +271,7 @@ export const translations = {
     
     // footer
     version: 'versão',
-    project: 'tcc - eng. mecânica',
+    project: 'bedflow atlas - ciência da computação',
     
     // sidebar
     create: 'Criação',
@@ -601,7 +601,7 @@ export const translations = {
     
     // footer
     version: 'version',
-    project: 'senior project - mechanical eng.',
+    project: 'bedflow atlas - computer science',
     
     // sidebar
     create: 'Creation',

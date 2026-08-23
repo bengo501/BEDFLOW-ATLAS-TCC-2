@@ -8,11 +8,11 @@ import {
 } from '../../services/api'
 import { useLanguage } from '../../context/LanguageContext'
 import { useActiveUser } from '../../context/UserContext'
-import ThemeIcon from '../ThemeIcon'
+import ThemeIcon from '../../components/common/ThemeIcon'
 import '../../styles/CasosCFD.css'
 import '../../styles/MeshViewer3DPage.css'
-import '../SimulationHistory.css'
-import '../PaginationControls.css'
+import '../../styles/SimulationHistory.css'
+import '../../styles/PaginationControls.css'
 import {
   IconRefresh,
   isConnectionError,

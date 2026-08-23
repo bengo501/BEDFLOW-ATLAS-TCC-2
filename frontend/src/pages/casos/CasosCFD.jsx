@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import '../styles/CasosCFD.css';
-import '../styles/MeshViewer3DPage.css';
-import ThemeIcon from './ThemeIcon';
-import BackendConnectionError from './BackendConnectionError';
-import PaginationControls from './PaginationControls';
-import { getCasosList, getCasoDetalhes, deleteCaso } from '../services/api';
+import '../../styles/CasosCFD.css';
+import '../../styles/MeshViewer3DPage.css';
+import ThemeIcon from '../../components/common/ThemeIcon';
+import BackendConnectionError from '../../components/common/BackendConnectionError';
+import PaginationControls from '../../components/common/PaginationControls';
+import { getCasosList, getCasoDetalhes, deleteCaso } from '../../services/api';
 
 /** instruções wsl genéricas (sem caminho absoluto do utilizador) */
 function buildComandoWsl(caso) {

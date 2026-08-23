@@ -8,8 +8,8 @@ import {
   postCfdCreateCase,
   postCfdCreateCaseOnly,
   parseApiError,
-} from '../../services/api';
-import { modelingProfileFromBackend } from '../../lib/pipelineParams';
+} from '../../../services/api';
+import { modelingProfileFromBackend } from '../../../lib/pipelineParams';
 
 export { modelingProfileFromBackend };
 

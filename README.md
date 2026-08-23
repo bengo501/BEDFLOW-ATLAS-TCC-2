@@ -1,41 +1,116 @@
-BEDFLOW-ATLAS-TCC-2
+# bedflow-atlas
 
-pipeline automatizado para simulacao cfd de leitos empacotados usando dsl, blender e openfoam.
+<p align="center">
+  <img src="docs/assets/cfdPipelineLight.png" alt="bedflow-atlas" width="220">
+</p>
 
-https://github.com/bengo501/CFD-PIPELINE-TCC-1/issues
+<p align="center">
+  automated cfd pipeline for packed beds — dsl, blender / python modeling, and openfoam.
+</p>
 
-https://github.com/bengo501/CFD-PIPELINE-TCC-1/milestones
+<p align="center">
+  <a href="README.pt.md">documentação em português</a>
+  ·
+  <a href="docs/en/README.md">full documentation (en)</a>
+  ·
+  <a href="docs/pt/README.md">documentação completa (pt)</a>
+</p>
 
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://python.org)
-[![Blender](https://img.shields.io/badge/blender-4.0+-orange.svg)](https://blender.org)
-[![OpenFOAM](https://img.shields.io/badge/openfoam-11-green.svg)](https://openfoam.org)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://python.org)
+[![blender](https://img.shields.io/badge/blender-4.0+-orange.svg)](https://blender.org)
+[![openfoam](https://img.shields.io/badge/openfoam-11-green.svg)](https://openfoam.org)
+[![license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-## tcc2: escopo local, docker e template
+https://github.com/bengo501/BEDFLOW-ATLAS/issues
 
-- **execução local** é o caminho principal do trabalho; stack em [`docker/docker-compose.yml`](docker/docker-compose.yml) (postgres, redis, minio, backend, frontend). na pasta `docker`: `docker compose up --build`.
-- **imagem backend**: construída a partir da **raiz do repo** (`docker build -f docker/Dockerfile ..`). variável de build **`WITH_BLENDER=0`** gera imagem sem blender (perfil **python modeling**); com **`1`** inclui blender.
-- **perfis de modelagem**: `MODELING_PROFILE=blender` (default) ou `MODELING_PROFILE=python` — ver [`docs/tcc2/PERFIS_MODELAGEM.md`](docs/tcc2/PERFIS_MODELAGEM.md). documentação para a monografia em [`docs/tcc2/`](docs/tcc2/).
-- **github template**: checklist em [`docs/tcc2/USO_COMO_TEMPLATE.md`](docs/tcc2/USO_COMO_TEMPLATE.md).
-- **painel «banco de dados»** na interface web (contagens sql + registo de pedidos): [`docs/DATABASE_PAGE.md`](docs/DATABASE_PAGE.md).
-- **relatórios** (texto + anexos a simulações/templates/resultados): [`docs/REPORTS_PAGE.md`](docs/REPORTS_PAGE.md).
-- **perfil** (singleton `user_profiles`, preferência de idioma): [`docs/PROFILE_PAGE.md`](docs/PROFILE_PAGE.md).
-- **configurações** (`app_settings`, `options_json`, modo simples/dev, openfoam/modelagem, swagger, shutdown dev): [`docs/SETTINGS_PAGE.md`](docs/SETTINGS_PAGE.md).
-- **modelo de dados** (mapeamento frontend/backend, entidades sql, fixture json de teste): [`docs/MODELO_DE_DADOS.md`](docs/MODELO_DE_DADOS.md).
+https://github.com/bengo501/BEDFLOW-ATLAS/milestones
 
-## sobre o projeto
+## what it is
 
-este projeto implementa um pipeline completo e reproduzivel para simulacao cfd (computational fluid dynamics) de leitos empacotados. a solucao aborda os principais problemas de reproducibilidade em simulacoes cientificas atraves de:
+bedflow-atlas generates packed-bed geometries from a `.bed` description, compiles them to normalized json, builds 3d models (pure python or blender rigid-body packing), and can drive openfoam cases. a react dashboard talks to a fastapi backend for wizard runs, jobs, results, templates, and reports.
 
-1. **dsl (domain specific language)** - linguagem `.bed` para descrever parametros de leitos
-2. **geracao automatica de geometria 3d** - usando blender com fisica rigid body
-3. **simulacao cfd automatizada** - usando openfoam (blockmesh, snappyhexmesh, simplefoam)
-4. **containerizacao** - docker compose na pasta `docker/` para reproducibilidade local
-5. **interface web** - dashboard para visualizacao e analise (planejado)
+pipeline:
 
-### 1. dsl - domain specific language
+1. **dsl** — declarative `.bed` language (antlr grammar)
+2. **compiler** — `.bed` → `.bed.json` (si units)
+3. **3d generation** — blender or the python modeling engine
+4. **cfd** — openfoam (`blockmesh`, `snappyhexmesh`, `simplefoam`)
+5. **web ui** — dashboard, wizard, 3d viewer, history, settings
 
-linguagem declarativa `.bed` para descrever leitos empacotados:
+## quick start (windows)
+
+double-click **`EXECUTAR_BEDFLOW-ATLAS.bat`** at the repo root.
+
+the launcher checks python, pip, wizard packages, backend packages, node/npm, and optionally open3d. if something is missing it asks and installs step by step (`winget` when available).
+
+then, in the wizard menu, pick **2** to start the web app (uvicorn on port **8000** + vite on **5173**).
+
+manual commands (from the repo root):
+
+```bash
+# wizard (recommended from the root, not from dsl/)
+python bed_wizard.py
+
+# backend
+cd backend
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+
+# frontend (another terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+- ui: http://127.0.0.1:5173
+- api: http://127.0.0.1:8000
+- swagger: http://127.0.0.1:8000/docs
+
+skip the installer checks: `EXECUTAR_BEDFLOW-ATLAS.bat --skip-checks`
+
+## local docker
+
+```bash
+cd docker
+copy .env.example .env
+docker compose up --build
+```
+
+backend image is built from the **repo root** (`docker build -f docker/Dockerfile ..`). `WITH_BLENDER=0` is the python-modeling profile; `1` includes blender. `MODELING_PROFILE=blender` (default) or `python`.
+
+## project layout
+
+```
+BEDFLOW-ATLAS/
+├── EXECUTAR_BEDFLOW-ATLAS.bat   # main launcher (checks + wizard)
+├── bed_wizard.py                # root shim → dsl/bed_wizard.py
+├── bedflow_*.py                 # shared path / mesh / registry modules
+├── backend/                     # fastapi api
+├── frontend/                    # react + vite ui
+├── dsl/                         # grammar, compiler, terminal wizard
+├── scripts/                     # automation, blender, openfoam, tests
+├── docker/                      # compose + dockerfiles
+├── docs/                        # documentation (en + pt)
+├── tutorial/                    # minimal openfoam tutorials
+├── cases/                       # sample .bed cases
+├── local_data/                  # runtime artifacts (gitignored)
+└── generated/                   # legacy pipeline outputs
+```
+
+root python modules (`bedflow_local_paths.py`, `bedflow_bed_registry.py`, …) stay at the root on purpose: backend, wizard, and docker import them as top-level modules.
+
+thin wrappers that used to sit in the root now live under `scripts/automation/`.
+
+## documentation
+
+| language | entry |
+|----------|--------|
+| english (this file) | [docs/en/README.md](docs/en/README.md) |
+| português | [README.pt.md](README.pt.md) · [docs/pt/README.md](docs/pt/README.md) |
+| html (wizard) | [dsl/documentacao.html](dsl/documentacao.html) · [dsl/documentacao_en.html](dsl/documentacao_en.html) |
+
+topics: [getting started](docs/en/getting-started.md) · [architecture](docs/en/architecture.md) · [dsl and wizard](docs/en/dsl-and-wizard.md) · [frontend](docs/en/frontend.md) · [backend](docs/en/backend.md) · [pipeline and cfd](docs/en/pipeline-and-cfd.md) · [docker](docs/en/docker.md) · [data and paths](docs/en/data-and-paths.md)
+
+## dsl example
 
 ```
 bed {
@@ -64,351 +139,24 @@ cfd {
 }
 ```
 
-### 2. compilador antlr
-
-compila `.bed` para `.bed.json` normalizado (valores em si):
+compile:
 
 ```bash
 python dsl/compiler/bed_compiler_antlr_standalone.py leito.bed
-# saida: leito.bed.json
 ```
 
-### 3. geracao 3d com blender
+## openfoam tutorials
 
-cria modelo 3d com fisica rigid body:
+versioned minimal cases (no packed-bed pipeline):
 
-```bash
-python dsl/bed_wizard.py
-# escolher modo blender
-# modelo salvo em generated/3d/output/
-```
+| folder | content |
+|--------|---------|
+| [`tutorial/cavity-icoFoam/`](tutorial/cavity-icoFoam/) | lid-driven cavity — `icoFoam` |
+| [`tutorial/channel-simpleFoam/`](tutorial/channel-simpleFoam/) | 2d laminar channel — `simpleFoam` |
+| [`tutorial/sphere-snappyHexMesh/`](tutorial/sphere-snappyHexMesh/) | `blockMesh` + `snappyHexMesh` |
 
-**features:**
+see [tutorial/README.md](tutorial/README.md).
 
-- cilindros ou cubos
-- tampas planas ou hemisfericas
-- particulas esfericas com fisica
-- simulacao de empacotamento por gravidade
+## author
 
-### 4. simulacao cfd com openfoam
-
-configura e executa simulacao automaticamente:
-
-```bash
-python scripts/openfoam_scripts/setup_openfoam_case.py \
-  dsl/leito.bed.json \
-  generated/3d/output/leito.blend \
-  --output-dir generated/cfd \
-  --run
-```
-
-**etapas automatizadas:**
-
-1. exportar stl do blender
-2. criar caso openfoam (0/, constant/, system/)
-3. gerar malha com blockmesh
-4. refinar malha com snappyhexmesh
-5. verificar qualidade com checkmesh
-6. resolver com simplefoam
-7. gerar arquivo para paraview
-
-### 5. tutoriais openfoam versionados (`tutorial/`)
-
-casos **minimos** no repositorio para validar openfoam e estudar fluxos classicos **sem** o pipeline do leito:
-
-| pasta | conteudo |
-|-------|----------|
-| [`tutorial/cavity-icoFoam/`](tutorial/cavity-icoFoam/) | cavidade com tampa arrastada — `icoFoam` (benchmark da literatura; ex.: ghia et al. 1982) |
-| [`tutorial/channel-simpleFoam/`](tutorial/channel-simpleFoam/) | canal 2d laminar estacionario — `simpleFoam` |
-| [`tutorial/sphere-snappyHexMesh/`](tutorial/sphere-snappyHexMesh/) | `blockMesh` + `snappyHexMesh` com `searchableSphere` (sem stl) |
-
-instrucoes completas: **[tutorial/README.md](tutorial/README.md)** (wsl/linux, `source` do openfoam, `./Allrun` / `./Allmesh`).
-
-### 6. wizard terminal cli e interface web
-
-- **terminal**: na raiz do repo, `python bed_wizard.py` (ou `python dsl/bed_wizard.py`). recomendado: `pip install -r dsl/requirements-terminal.txt`.
-- **browser**: no wizard web, modo **wizard terminal cli** pede ao backend para tentar abrir uma janela de terminal ou mostra os comandos para copiar (`GET /api/wizard/cli-instructions`, `POST /api/wizard/launch-cli-terminal`).
-
-## tecnologias utilizadas
-
-| componente   | tecnologia    | versao | uso                          |
-| ------------ | ------------- | ------ | ---------------------------- |
-| dsl          | antlr         | 4.13.1 | parser e compilador          |
-| geometria    | blender       | 4.0+   | geracao 3d e fisica          |
-| cfd          | openfoam      | 11     | simulacao fluidos            |
-| visualizacao | paraview      | 5.11+  | pos-processamento            |
-| linguagem    | python        | 3.8+   | automacao e scripts          |
-| ambiente     | wsl2 + ubuntu | 22.04  | execucao openfoam no windows |
-
-## documentacao
-
-### guias principais
-
-- **[docs/tcc2/](docs/tcc2/)** - escopo tcc2, perfis blender/python, template, registo de alterações
-- **[scripts/automation/README.md](scripts/automation/README.md)** - instalacao e configuracao
-- **[docs/UML_COMPLETO.md](docs/UML_COMPLETO.md)** - arquitetura e diagramas
-- **[docs/OPENFOAM_WINDOWS_GUIA.md](docs/OPENFOAM_WINDOWS_GUIA.md)** - guia openfoam
-- **[docs/GUIA_EXECUCAO_RAPIDO.md](docs/GUIA_EXECUCAO_RAPIDO.md)** - guia de execucao rapida frontend + backend
-- **[dsl/documentacao.html](dsl/documentacao.html)** - documentacao web interativa
- - **[docs/CFD_RESULTS_PIPELINE.md](docs/CFD_RESULTS_PIPELINE.md)** - fluxo de resultados cfd (openfoam → banco → dashboard)
-
-### guias especificos
-
-- **[dsl/README_BLENDER_MODE.md](dsl/README_BLENDER_MODE.md)** - modo blender do wizard
-- **[dsl/README_SISTEMA_AJUDA.md](dsl/README_SISTEMA_AJUDA.md)** - sistema de ajuda
-- **[tutorial/README.md](tutorial/README.md)** - casos cavity, simplefoam e snappyhexmesh versionados
-- **[scripts/openfoam_scripts/GUIA_SIMULACAO_MANUAL.md](scripts/openfoam_scripts/GUIA_SIMULACAO_MANUAL.md)** - simulacao manual
-- **[scripts/openfoam_scripts/README.md](scripts/openfoam_scripts/README.md)** - scripts openfoam
-
-## uso basico
-
-### 1. criar um leito com wizard interativo
-
-recomendado instalar a interface rica do terminal (tabelas, cores, barra tipo navegador):
-
-```bash
-pip install -r dsl/requirements-terminal.txt
-```
-
-```bash
-# na raiz do projeto (recomendado)
-python bed_wizard.py
-
-# ou, equivalente:
-python dsl/bed_wizard.py
-
-# ou a partir da pasta dsl:
-cd dsl
-python bed_wizard.py
-```
-
-**opcoes:**
-
-1. modo interativo - responder questoes
-2. modo edicao - editar arquivo .bed
-3. modo blender - gerar apenas 3d
-4. modo blender interativo - gerar e abrir blender
-5. documentacao - abrir docs html
-
-### 2. gerar modelo 3d
-
-o wizard ja gera automaticamente no modo blender. ou manualmente:
-
-```bash
-cd scripts/standalone_scripts
-python executar_leito_headless.py
-```
-
-### 3. executar simulacao cfd
-
-```bash
-# configurar caso
-python scripts/openfoam_scripts/setup_openfoam_case.py \
-  dsl/leito_interativo.bed.json \
-  generated/3d/output/leito_interativo.blend \
-  --output-dir generated/cfd
-
-# executar no wsl
-wsl
-cd /mnt/c/Users/[SEU_USUARIO]/Downloads/CFD-PIPELINE-TCC-1/generated/cfd/leito_interativo
-source /opt/openfoam11/etc/bashrc
-./Allrun
-
-# visualizar
-paraview caso.foam
-```
-
-## estrutura do projeto
-
-```
-CFD-PIPELINE-TCC-1/
-├── .config/                         # arquivos de configuracao (config.ini, env.example)
-├── bed_wizard.py                    # atalho na raiz -> dsl/bed_wizard.py (wizard terminal)
-├── tutorial/                        # casos openfoam minimos versionados (cavity, simplefoam, snappy)
-├── docker/                          # docker-compose e dockerfiles
-├── dsl/                              # domain specific language
-│   ├── grammar/
-│   │   └── Bed.g4                   # gramatica antlr
-│   ├── compiler/
-│   │   └── bed_compiler_antlr_standalone.py
-│   ├── generated/                   # parser gerado pelo antlr
-│   ├── bed_wizard.py                # interface principal
-│   └── documentacao.html            # docs web
-│
-├── scripts/
-│   ├── automation/                  # scripts de instalacao e setup
-│   │   ├── setup_complete.py        # setup completo
-│   │   ├── install_openfoam.py      # instalador openfoam
-│   │   ├── install_antlr.py         # instalador antlr
-│   │   └── README.md                # guia instalacao
-│   ├── blender_scripts/
-│   │   └── leito_extracao.py        # geracao 3d
-│   ├── openfoam_scripts/
-│   │   └── setup_openfoam_case.py   # configuracao cfd
-│   ├── standalone_scripts/
-│   │   └── executar_leito_headless.py
-│   └── tests/                       # testes automatizados
-│       ├── e2e/                     # testes end-to-end do pipeline
-│       └── smoke/                   # smoke tests basicos (bed + pipeline reduzido)
-│
-├── generated/                       # artefatos gerados pelo pipeline
-│   ├── 3d/
-│   │   ├── blender/                 # arquivos .blend fonte
-│   │   ├── exports/                 # glb/gltf/obj/stl exportados
-│   │   └── output/                  # modelos 3d finais por execucao
-│   ├── cfd/                         # casos openfoam (malha, 0/, system/, constant/)
-│   ├── configs/                     # arquivos .bed e .bed.json normalizados
-│   └── batch/                       # resultados de execucoes em lote
-│
-├── docs/                             # documentacao
-│   └── GUIA_EXECUCAO_RAPIDO.md      # guia de execucao rapida
-│
-└── README.md                         # este arquivo
-```
-
-## categorias de pastas
-
-- **codigo-fonte principal**
-  - `backend/` - api fastapi, servicos, modelos, integracoes (openfoam, blender, dsl)
-  - `frontend/` - aplicacao web (react/vite)
-  - `dsl/` - gramatica, compilador e wizard (`Bed.g4`, `bed_wizard.py`, `compiler/`)
-  - `scripts/` - scripts de automacao, openfoam, blender e testes (`automation/`, `openfoam_scripts/`, `blender_scripts/`, `standalone_scripts/`, `tests/`)
-  - `docs/`, `.github/`, `.config/` - documentacao, templates e configuracoes
-
-- **codigo gerado mas versionado**
-  - `dsl/generated/` - arquivos python gerados pelo antlr a partir de `Bed.g4` (lexer/parser/listener)
-
-- **dados gerados em runtime (artefatos do pipeline)**
-  - `generated/3d/` - arquivos `.blend`, exports (`.glb`, `.gltf`, `.obj`, `.stl`) e modelos finais por execucao
-  - `generated/cfd/` - casos openfoam (malha, `0/`, `system/`, `constant/`, resultados)
-  - `generated/configs/` - arquivos `.bed` e `.bed.json` normalizados
-  - `generated/batch/` - execucoes em lote
-  - diretorios de saida de testes em `scripts/tests/e2e/**` (`outputs/`, `results/`, `logs/`)
-
-- **artefatos temporarios / caches**
-  - `**/__pycache__/`, `**/*.pyc`
-  - `.pytest_cache/`, `coverage/`, `htmlcov/`
-  - `frontend/node_modules/` e caches do vite (`frontend/node_modules/.vite/`)
-
-estes artefatos podem ser regenerados (ou sao apenas cache) e **nao precisam ser versionados**.
-
-## limpeza segura do workspace
-
-para evitar quebrar o pipeline, use as regras abaixo ao limpar o projeto:
-
-- **nao remover automaticamente**
-  - `backend/**`, `frontend/**`, `dsl/**`, `scripts/**`, `docs/**`, `.github/**`, `.config/**`
-  - arquivos de configuracao locais (`config/config.ini`, `backend/.env`, etc.) - sempre fazer backup antes de qualquer limpeza agressiva
-
-- **seguro remover sempre (regeravel)**
-  - caches python: `**/__pycache__/`, `**/*.pyc`, `.pytest_cache/`
-  - relatorios de cobertura: `coverage/`, `htmlcov/`
-  - dependencias do frontend: `frontend/node_modules/` (reinstalar com `npm install`)
-  - caches vite: `frontend/node_modules/.vite/`
-  - saidas e logs de testes e2e em `scripts/tests/e2e/**/outputs`, `logs`, `results`
-
-- **remover apenas se voce quiser refazer simulacoes / modelos**
-  - qualquer coisa em `generated/**`:
-    - apagar `generated/3d/**` remove modelos 3d ja gerados
-    - apagar `generated/cfd/**` remove casos e resultados openfoam
-    - apagar `generated/configs/**` remove `.bed.json` normalizados (podem ser recriados a partir dos `.bed`)
-
-antes de automatizar qualquer limpeza (por exemplo com scripts), sempre valide se o caminho alvo entra em uma destas categorias e **nunca** inclua pastas de codigo-fonte por engano.
-
-## scripts de automacao
-
-### instalacao completa
-
-```bash
-# instala tudo (python, java, antlr, blender, openfoam)
-python scripts/automation/setup_complete.py
-```
-
-### instalacao por componente
-
-```bash
-# apenas antlr + java
-python scripts/automation/install_antlr.py
-
-# apenas blender
-python scripts/automation/install_blender.py
-
-# apenas openfoam (windows)
-python scripts/automation/install_openfoam.py
-```
-
-mais detalhes: [scripts/automation/README.md](scripts/automation/README.md)
-
-## ferramentas auxiliares (dev tools)
-
-- **visualizacao de cilindro de teste em opengl**
-  - scripts: `tools/vis_cilindro/modelo_cilindro.py` e `tools/vis_cilindro/visualizador.py`
-  - wrapper no windows: `executar_modelo_e_visualizar.bat`
-  - saidas em: `generated/3d/cilindro_teste/`
-
-- **limpeza de workspace**
-  - script: `tools/clean_workspace.py`
-  - comportamento:
-    - remove caches (`__pycache__`, `.pytest_cache`, `coverage`, `htmlcov`, `frontend/node_modules`, logs, saidas de testes e2e)
-    - opcionalmente, pode apagar toda a pasta `generated/` (somente apos confirmacao explicita no terminal)
-
-## exemplos
-
-### exemplo 1: leito cilindrico com 100 particulas
-
-```bash
-python dsl/bed_wizard.py
-# escolher modo blender
-# diametro: 0.05m
-# altura: 0.1m
-# particulas: 100
-# diametro particula: 0.005m
-```
-
-**resultado:** `generated/3d/output/leito_blender.blend`
-
-### exemplo 2: simulacao cfd completa
-
-```bash
-# 1. criar leito
-python dsl/bed_wizard.py  # modo interativo
-
-# 2. gerar modelo
-# (ja gerado automaticamente)
-
-# 3. configurar cfd
-python scripts/openfoam_scripts/setup_openfoam_case.py \
-  dsl/leito_interativo.bed.json \
-  generated/3d/output/leito_interativo.blend \
-  --output-dir generated/cfd \
-  --run
-
-# 4. visualizar
-# (automatico ao final da simulacao)
-```
-
-## testes
-
-### testar compilador dsl
-
-```bash
-cd dsl
-python compiler/bed_compiler_antlr_standalone.py examples/leito.bed
-```
-
-### testar geracao 3d
-
-```bash
-python scripts/standalone_scripts/executar_leito_headless.py
-```
-
-### testar setup openfoam
-
-```bash
-python scripts/openfoam_scripts/setup_openfoam_case.py --help
-```
-
-## autor
-
-**bengo501**
-- github: [@bengo501](https://github.com/bengo501)
+**bengo501** — [github](https://github.com/bengo501)

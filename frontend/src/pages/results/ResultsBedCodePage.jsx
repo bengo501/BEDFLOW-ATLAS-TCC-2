@@ -6,15 +6,15 @@ import {
   buildGeneratedFileUrl,
   parseApiError,
 } from '../../services/api'
-import ThemeIcon from '../ThemeIcon'
-import BackendConnectionError from '../BackendConnectionError'
-import PaginationControls from '../PaginationControls'
+import ThemeIcon from '../../components/common/ThemeIcon'
+import BackendConnectionError from '../../components/common/BackendConnectionError'
+import PaginationControls from '../../components/common/PaginationControls'
 import { useLanguage } from '../../context/LanguageContext'
 import { useActiveUser } from '../../context/UserContext'
 import '../../styles/CasosCFD.css'
 import '../../styles/MeshViewer3DPage.css'
 import '../../styles/BedLoadModal.css'
-import '../SimulationHistory.css'
+import '../../styles/SimulationHistory.css'
 import { IconRefresh, formatBytes, isConnectionError } from './resultsShared'
 
 function originLabel(item, pt) {

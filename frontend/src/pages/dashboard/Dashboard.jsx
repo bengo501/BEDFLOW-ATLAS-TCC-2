@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useLanguage } from '../context/LanguageContext';
-import ThemeIcon from './ThemeIcon';
-import BackendConnectionError from './BackendConnectionError';
-import PaginationControls from './PaginationControls';
-import './Dashboard.css';
-import '../styles/CasosCFD.css';
-import '../styles/MeshViewer3DPage.css';
-import { getDashboardSummary, listSimulations, getSimulation, deleteSimulation, parseApiError, getArtifactsStorage } from '../services/api';
-import { getSimStatusBadgeClass, slugify } from './results/resultsShared';
-import { useActiveUser } from '../context/UserContext';
+import { useLanguage } from '../../context/LanguageContext';
+import ThemeIcon from '../../components/common/ThemeIcon';
+import BackendConnectionError from '../../components/common/BackendConnectionError';
+import PaginationControls from '../../components/common/PaginationControls';
+import '../../styles/Dashboard.css';
+import '../../styles/CasosCFD.css';
+import '../../styles/MeshViewer3DPage.css';
+import { getDashboardSummary, listSimulations, getSimulation, deleteSimulation, parseApiError, getArtifactsStorage } from '../../services/api';
+import { getSimStatusBadgeClass, slugify } from '../results/resultsShared';
+import { useActiveUser } from '../../context/UserContext';
 
 function formatDurationSeconds(sec) {
   if (typeof sec !== 'number' || Number.isNaN(sec) || sec < 0) return '—';
